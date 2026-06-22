@@ -1,6 +1,6 @@
 # danpeltier.ca — Portfolio Site
 
-A dark-themed, single-server portfolio built with **TypeScript + Express 5**, served as static HTML pages from a pnpm monorepo. No frontend framework — just hand-crafted HTML, CSS, and vanilla JS.
+A dark-themed, single-server portfolio built with **HTML + CSS + JavaScript + PHP**.
 
 ---
 
@@ -8,10 +8,9 @@ A dark-themed, single-server portfolio built with **TypeScript + Express 5**, se
 
 | Route | Page | Description |
 |---|---|---|
-| `/api/home` | **Homepage** | Intro, quick links to all sections, and a brief bio. |
-| `/api/resume` | **Resume** | Interactive dark-themed résumé. Includes a "Things I've Built" section with hover (desktop) or tap (mobile) image previews for each project. |
-| `/api/portfolio` | **Portfolio** | Project showcase with four sections — Dashboards, Demos, GroupBy Website, and Shopify — with a lightbox for images and an in-page video player. |
-| `/api/playground` | **Developer's Playground** | Interactive coding tutorials with live preview. See below for full usage guide. |
+| `/` | **Homepage** | Intro, quick links to all sections, and a brief bio. |
+| `/portfolio` | **Portfolio** | Project showcase with four sections — Dashboards, Demos, GroupBy Website, and Shopify — with a lightbox for images and an in-page video player. |
+| `/playground` | **Developer's Playground** | Interactive coding tutorials with live preview. See below for full usage guide. |
 | `*` (any other path) | **404** | Animated robot 404 page with cycling quips and a starfield background. |
 
 All pages share a consistent sidebar navigation, dark design tokens, and Inter + JetBrains Mono fonts.
@@ -57,43 +56,3 @@ Use the **☀ / ☾** button in the toolbar to invert the preview pane for light
 ### Mobile
 
 On smaller screens the layout collapses to a bottom tab bar. Tap **Files** to browse tutorials, **Preview** to see output, and **Code** to read the source.
-
----
-
-## Project Structure
-
-```
-artifacts/
-└── api-server/
-    ├── src/
-    │   └── app.ts          # Express 5 server, routes, static file serving
-    └── public/
-        ├── index.html      # Homepage
-        ├── resume.html     # Interactive résumé
-        ├── portfolio.html  # Portfolio showcase
-        ├── playground.html # Developer's Playground
-        ├── 404.html        # Animated 404 page
-        └── portfolio/      # Portfolio media assets
-```
-
----
-
-## Running Locally
-
-```bash
-pnpm install
-pnpm --filter @workspace/api-server run dev
-```
-
-The server reads the `PORT` environment variable (default assigned by Replit). Open `/api/home` in your browser to start.
-
----
-
-## Tech Stack
-
-- **Runtime:** Node.js + TypeScript
-- **Server:** Express 5
-- **Package manager:** pnpm (monorepo workspace)
-- **Fonts:** Inter, JetBrains Mono (Google Fonts)
-- **Syntax highlighting:** Prism.js (Playground)
-- **No frontend framework** — all pages are self-contained HTML files

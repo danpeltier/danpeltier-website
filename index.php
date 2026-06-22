@@ -1,5 +1,17 @@
 <?php
 
+require_once __DIR__ . '/vendor/autoload.php';
+
+\Sentry\init([
+  'dsn' => 'https://aaa9ffcdc602dd24631494585158fc4b@o4511609800425472.ingest.us.sentry.io/4511609899384832',
+  // Specify a fixed sample rate
+  'traces_sample_rate' => 1.0,
+  // Set a sampling rate for profiling - this is relative to traces_sample_rate
+  'profiles_sample_rate' => 1.0,
+  // Enable logs to be sent to Sentry
+  'enable_logs' => true,
+]);
+
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
