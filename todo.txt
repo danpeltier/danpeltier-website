@@ -1,0 +1,23 @@
+to do:
+
+
+
+DEV PLAYGROUND
+
+Fetch API
+
+  - weather api + google maps (if sunny, get directions to nearest beach, else get directions to nearest cinema)
+
+
+  - error handling (just provide bad URL)
+
+
+
+AJAX
+
+  - POST:
+    - same keyword/images endpoint
+
+
+
+  (get rid of other 2)

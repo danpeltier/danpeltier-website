@@ -1,0 +1,2742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Developer's Playground — Dan Peltier</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/ui/1.13.3/jquery-ui.min.js" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0b0d15; --bg-card: rgba(255,255,255,0.028); --bg-card-hover: rgba(255,255,255,0.052);
+      --bg-sidebar: #0d101a; --bg-dock: #090b12;
+      --accent: #4f9cf9; --accent-dim: rgba(79,156,249,0.1); --accent-glow: rgba(79,156,249,0.22);
+      --accent-2: #a78bfa; --accent-2-dim: rgba(167,139,250,0.1);
+      --accent-3: #34d399; --accent-3-dim: rgba(52,211,153,0.1);
+      --text: #dde3ee; --text-muted: #7b8faa; --text-faint: #3d4a5c;
+      --border: rgba(255,255,255,0.06); --border-hover: rgba(255,255,255,0.11);
+      --sidebar-w: 260px; --dock-w: 272px; --radius: 10px;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
+
+    /* ─── Sidebar ─── */
+    .sidebar {
+      position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: 100vh;
+      background: var(--bg-sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; padding: 2rem 1.5rem; z-index: 300; overflow-y: auto;
+    }
+    .sidebar-brand { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 0.2rem; }
+    .sidebar-url { font-size: 0.7rem; color: var(--text-faint); margin-bottom: 2rem; }
+    .nav-section-label { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 0.6rem; margin-top: 1.25rem; }
+    .nav-list { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+    .nav-list a { display: flex; align-items: center; gap: 0.55rem; padding: 0.48rem 0.7rem; border-radius: 7px; text-decoration: none; color: var(--text-muted); font-size: 0.84rem; font-weight: 500; transition: all 0.18s ease; border: 1px solid transparent; }
+    .nav-list a svg { width: 13px; height: 13px; flex-shrink: 0; opacity: 0.65; }
+    .nav-list a:hover { color: var(--text); background: var(--accent-dim); border-color: rgba(79,156,249,0.12); }
+    .nav-list a.active { color: var(--accent-3); background: var(--accent-3-dim); border-color: rgba(52,211,153,0.18); }
+    .nav-list a.active svg { opacity: 1; }
+    .sidebar-bottom { margin-top: auto; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.5rem; }
+    .sidebar-link { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.7rem; border-radius: 7px; text-decoration: none; color: var(--text-muted); font-size: 0.8rem; font-weight: 500; border: 1px solid var(--border); transition: all 0.2s ease; }
+    .sidebar-link:hover { color: var(--text); background: var(--accent-dim); border-color: rgba(79,156,249,0.18); }
+    .sidebar-link svg { width: 12px; height: 12px; opacity: 0.65; }
+
+    /* ─── Dock ─── */
+    .dock {
+      position: fixed; top: 0; left: var(--sidebar-w); width: var(--dock-w); height: 100vh;
+      background: var(--bg-dock); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; z-index: 200; overflow: hidden;
+      transition: width 0.26s cubic-bezier(0.4,0,0.2,1);
+    }
+    .dock.collapsed { width: 48px; }
+
+    .dock-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.85rem 0.75rem 0.85rem 0.9rem;
+      border-bottom: 1px solid var(--border); min-height: 50px; flex-shrink: 0;
+    }
+    .dock-title { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-faint); white-space: nowrap; overflow: hidden; flex: 1; transition: opacity 0.18s; }
+    .dock.collapsed .dock-title { opacity: 0; pointer-events: none; }
+    .dock-toggle {
+      width: 26px; height: 26px; border-radius: 5px; background: none;
+      border: 1px solid var(--border); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted); flex-shrink: 0; transition: all 0.18s;
+    }
+    .dock-toggle:hover { background: var(--bg-card-hover); color: var(--text); }
+    .dock-toggle svg { width: 11px; height: 11px; transition: transform 0.26s ease; }
+    .dock.collapsed .dock-toggle svg { transform: rotate(180deg); }
+
+    .dock-tree { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0.4rem 0; }
+    .dock-tree::-webkit-scrollbar { width: 3px; }
+    .dock-tree::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+
+    .folder-row {
+      display: flex; align-items: center; gap: 0; padding: 0.44rem 0.6rem;
+      cursor: pointer; user-select: none; transition: background 0.13s; white-space: nowrap;
+    }
+    .folder-row:hover { background: rgba(255,255,255,0.04); }
+    .folder-chevron { width: 14px; height: 14px; flex-shrink: 0; color: var(--text-faint); transition: transform 0.2s ease; margin-right: 4px; }
+    .folder-row.open .folder-chevron { transform: rotate(90deg); }
+    .folder-icon { font-size: 0.85rem; flex-shrink: 0; margin-right: 6px; }
+    .folder-label { font-size: 0.82rem; color: var(--text-muted); font-weight: 600; overflow: hidden; flex: 1; transition: opacity 0.18s; }
+    .folder-badge {
+      font-size: 0.6rem; padding: 0.08rem 0.38rem; border-radius: 10px;
+      font-family: 'JetBrains Mono', monospace; flex-shrink: 0;
+      transition: opacity 0.18s; white-space: nowrap;
+    }
+    .dock.collapsed .folder-label,
+    .dock.collapsed .folder-badge { opacity: 0; pointer-events: none; }
+    .dock.collapsed .folder-chevron { opacity: 0; }
+
+    .file-list { overflow: hidden; }
+    .file-row {
+      display: flex; align-items: center; gap: 0.45rem;
+      padding: 0.33rem 0.6rem 0.33rem 2.1rem;
+      cursor: pointer; user-select: none; transition: background 0.13s;
+      white-space: nowrap; border-left: 2px solid transparent; position: relative;
+    }
+    .file-row:hover { background: rgba(255,255,255,0.04); }
+    .file-row.active { background: var(--accent-dim); border-left-color: var(--accent); }
+    .file-row.active .file-name { color: var(--accent); }
+    .file-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .file-name { font-size: 0.78rem; color: var(--text-muted); overflow: hidden; transition: opacity 0.18s; flex: 1; min-width: 0; }
+    .file-code-btn {
+      margin-left: auto; opacity: 0; flex-shrink: 0;
+      padding: 0.12rem 0.3rem; border-radius: 3px;
+      color: var(--text-muted); font-size: 0.65rem; font-family: var(--mono);
+      font-weight: 700; line-height: 1; cursor: pointer;
+      transition: opacity 0.15s, background 0.12s, color 0.12s;
+    }
+    .file-row:hover .file-code-btn,
+    .file-row.active .file-code-btn { opacity: 1; }
+    .file-code-btn:hover { background: rgba(255,255,255,0.1); color: var(--accent); }
+    .dock.collapsed .file-list { display: none; }
+
+    /* ─── Playground Main ─── */
+    .playground-main {
+      position: fixed; top: 0; right: 0;
+      left: calc(var(--sidebar-w) + var(--dock-w));
+      bottom: 0; display: flex; flex-direction: column;
+      transition: left 0.26s cubic-bezier(0.4,0,0.2,1);
+      overflow: hidden; background: var(--bg);
+    }
+    .playground-main.dock-collapsed { left: calc(var(--sidebar-w) + 48px); }
+
+    /* Welcome state */
+    .welcome-state {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 3rem; text-align: center;
+    }
+    .welcome-icon { font-size: 3.5rem; margin-bottom: 1.25rem; opacity: 0.6; }
+    .welcome-title { font-size: 1.6rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
+    .welcome-sub { font-size: 0.9rem; color: var(--text-muted); max-width: 460px; line-height: 1.65; margin-bottom: 2rem; }
+    .welcome-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; max-width: 660px; width: 100%; }
+    .welcome-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 9px;
+      padding: 1rem 0.85rem; text-align: center; cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .welcome-card:hover { background: var(--bg-card-hover); border-color: var(--border-hover); transform: translateY(-2px); }
+    .welcome-card-icon { font-size: 1.5rem; margin-bottom: 0.4rem; }
+    .welcome-card-lang { font-size: 0.78rem; font-weight: 600; margin-bottom: 0.2rem; }
+    .welcome-card-count { font-size: 0.7rem; color: var(--text-faint); }
+
+    /* Tutorial area */
+    .tutorial-area {
+      display: none; flex: 1; flex-direction: column; overflow: hidden;
+    }
+    .tutorial-area.visible { display: flex; }
+
+    .preview-toolbar {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.6rem 1rem; border-bottom: 1px solid var(--border);
+      background: var(--bg-dock); flex-shrink: 0;
+    }
+    .preview-toolbar .tut-label { font-family: 'JetBrains Mono', monospace; font-size: 0.66rem; color: var(--text-faint); letter-spacing: 0.15em; text-transform: uppercase; }
+    .preview-toolbar .tut-title { font-size: 0.88rem; font-weight: 600; color: var(--text); }
+    .preview-toolbar .tut-sep { color: var(--text-faint); margin: 0 0.25rem; }
+    .concepts { display: flex; flex-wrap: wrap; gap: 0.3rem; flex: 1; }
+    .concept-tag {
+      font-size: 0.68rem; padding: 0.12rem 0.45rem; border-radius: 4px;
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      color: var(--text-muted); font-family: 'JetBrains Mono', monospace;
+    }
+    .toolbar-actions { display: flex; align-items: center; gap: 0.4rem; margin-left: auto; flex-shrink: 0; }
+    .tb-btn {
+      display: flex; align-items: center; gap: 0.3rem;
+      padding: 0.3rem 0.65rem; border-radius: 6px; cursor: pointer;
+      font-size: 0.75rem; font-weight: 500; border: 1px solid var(--border);
+      background: var(--bg-card); color: var(--text-muted);
+      transition: all 0.18s; white-space: nowrap;
+    }
+    .tb-btn:hover { background: var(--bg-card-hover); color: var(--text); border-color: var(--border-hover); }
+    .tb-btn.accent { background: var(--accent-dim); border-color: rgba(79,156,249,0.25); color: var(--accent); }
+    .tb-btn.accent:hover { background: rgba(79,156,249,0.18); }
+    .tb-btn svg { width: 11px; height: 11px; }
+
+    .preview-wrap { flex: 1; position: relative; overflow: hidden; }
+    .preview-iframe {
+      width: 100%; height: 100%; border: none; display: block;
+      background: #fff; transition: background 0.2s;
+    }
+    .preview-iframe.dark-mode { filter: invert(1) hue-rotate(180deg); }
+    .preview-placeholder {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: var(--text-faint); font-size: 0.85rem;
+    }
+
+    /* ─── Editor Windows Layer ─── */
+    #windows-layer { position: fixed; inset: 0; pointer-events: none; z-index: 500; }
+    #windows-layer > * { pointer-events: all; }
+
+    .editor-win {
+      position: fixed; background: #0f1119; border: 1px solid var(--border);
+      border-radius: 11px; box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+      display: flex; flex-direction: column; overflow: hidden;
+      min-width: 420px; min-height: 60px;
+      transition: box-shadow 0.15s ease;
+    }
+    .editor-win:hover { box-shadow: 0 28px 72px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06); }
+    .editor-win.minimized { overflow: visible; }
+    .editor-win.minimized .win-body { display: none; }
+
+    .win-titlebar {
+      display: flex; align-items: center; gap: 0.5rem; padding: 0 0.85rem;
+      height: 38px; flex-shrink: 0; cursor: grab; user-select: none;
+      background: #0c0e18; border-bottom: 1px solid var(--border);
+    }
+    .win-titlebar:active { cursor: grabbing; }
+    .win-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .win-filename { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--text-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .win-lang-badge { font-size: 0.6rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-weight: 500; flex-shrink: 0; }
+    .win-controls { display: flex; gap: 0.3rem; margin-left: auto; flex-shrink: 0; }
+    .win-btn {
+      width: 22px; height: 22px; border-radius: 5px; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 0.7rem;
+      background: rgba(255,255,255,0.05); color: var(--text-muted); transition: all 0.15s;
+    }
+    .win-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+    .win-btn.close:hover { background: rgba(239,68,68,0.25); color: #ef4444; }
+
+    .win-toolbar {
+      display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.85rem;
+      border-bottom: 1px solid var(--border); background: #0c0e18; flex-shrink: 0;
+    }
+    .win-tb-btn {
+      display: flex; align-items: center; gap: 0.25rem; padding: 0.28rem 0.6rem;
+      border-radius: 5px; cursor: pointer; font-size: 0.73rem; font-weight: 500;
+      border: 1px solid var(--border); background: none; color: var(--text-muted);
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .win-tb-btn:hover { background: var(--bg-card-hover); color: var(--text); border-color: var(--border-hover); }
+    .win-tb-btn.active { background: var(--accent-dim); border-color: rgba(79,156,249,0.22); color: var(--accent); }
+    .win-tb-btn.run { background: var(--accent-3-dim); border-color: rgba(52,211,153,0.22); color: var(--accent-3); }
+    .win-tb-btn.run:hover { background: rgba(52,211,153,0.15); }
+    .win-tb-sep { width: 1px; height: 16px; background: var(--border); margin: 0 0.2rem; }
+    .copy-flash { color: var(--accent-3) !important; }
+
+    .win-body { flex: 1; overflow: auto; position: relative; }
+    .win-body::-webkit-scrollbar { width: 5px; height: 5px; }
+    .win-body::-webkit-scrollbar-track { background: transparent; }
+    .win-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+    /* Code view (Prism) */
+    .code-view { display: block; }
+    .code-view pre {
+      margin: 0 !important; border-radius: 0 !important;
+      background: transparent !important; padding: 1rem 1.1rem !important;
+      font-family: 'JetBrains Mono', monospace !important; font-size: 0.8rem !important;
+      line-height: 1.65 !important; tab-size: 2;
+      white-space: pre !important; overflow-x: auto;
+    }
+    .code-view pre code { background: transparent !important; font-size: inherit !important; white-space: pre !important; }
+
+    /* Soft-wrap mode — toggled via .wrap-mode class on the window */
+    .editor-win.wrap-mode .code-view pre,
+    .editor-win.wrap-mode .code-view pre code { white-space: pre-wrap !important; word-break: break-all; overflow-x: hidden; }
+    .editor-win.wrap-mode .code-edit { white-space: pre-wrap !important; overflow-wrap: break-word; overflow-x: hidden; }
+
+    /* Custom Prism overrides — brand colours */
+    .token.tag, .token.keyword { color: var(--accent-2) !important; }
+    .token.attr-name, .token.selector { color: var(--accent) !important; }
+    .token.attr-value, .token.string { color: var(--accent-3) !important; }
+    .token.comment { color: var(--text-faint) !important; font-style: italic; }
+    .token.number, .token.boolean { color: #fbbf24 !important; }
+    .token.function { color: var(--accent) !important; }
+    .token.property { color: #f472b6 !important; }
+    .token.punctuation { color: var(--text-faint) !important; }
+    .token.operator { color: var(--accent-2) !important; }
+
+    /* Edit textarea */
+    .code-edit {
+      display: none; width: 100%; height: 100%;
+      background: #0f1119; color: #cdd6f4;
+      border: none; outline: none; resize: none;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; line-height: 1.65;
+      padding: 1rem 1.1rem; tab-size: 2; white-space: pre;
+      overflow: auto;
+    }
+
+    .win-status { padding: 0.25rem 0.85rem; background: #0a0c14; border-top: 1px solid var(--border); font-size: 0.65rem; color: var(--text-faint); font-family: 'JetBrains Mono', monospace; display: flex; gap: 1rem; flex-shrink: 0; }
+
+    /* jQuery UI draggable — keep grab cursor on titlebar */
+    .win-titlebar { cursor: grab !important; }
+    .win-titlebar:active { cursor: grabbing !important; }
+
+    /* jQuery UI resizable handle — styled to match dark theme */
+    .ui-resizable-se {
+      width: 14px !important; height: 14px !important;
+      right: 0 !important; bottom: 0 !important;
+      background: none !important; cursor: nwse-resize !important;
+      z-index: 10;
+    }
+    .ui-resizable-se::after {
+      content: ''; position: absolute; bottom: 3px; right: 3px;
+      width: 6px; height: 6px;
+      border-right: 2px solid var(--text-faint);
+      border-bottom: 2px solid var(--text-faint);
+      border-radius: 1px;
+    }
+    /* Suppress jQuery UI default outline on resizable */
+    .ui-resizable-handle { outline: none !important; }
+
+    /* Mobile header */
+    /* Mobile header — desktop tablet only */
+    .mobile-header { display: none; }
+    .mobile-brand { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--accent-3); letter-spacing: 0.1em; }
+
+    /* ─── Mobile shell (hidden on desktop) ─────────────────────────── */
+    #mob-shell { display: none; }
+
+    /* ─── Tablet (769–900px): hide sidebar, keep dock ──────────────── */
+    @media (min-width: 769px) and (max-width: 900px) {
+      .sidebar { display: none; }
+      .dock { left: 0; z-index: 500; }
+      .playground-main { left: 272px !important; }
+      .playground-main.dock-collapsed { left: 48px !important; }
+      .welcome-cards { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ─── Mobile (≤ 768px): full 3-tab shell ───────────────────────── */
+    @media (max-width: 768px) {
+      .sidebar, .dock, #windows-layer, .playground-main, .mobile-header { display: none !important; }
+
+      #mob-shell {
+        display: flex; flex-direction: column;
+        position: fixed; inset: 0;
+        background: var(--bg); overflow: hidden; z-index: 200;
+      }
+
+      /* Top bar */
+      #mob-topbar {
+        height: 50px; flex-shrink: 0;
+        background: #10131f; border-bottom: 1px solid var(--border);
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 1rem; gap: 0.75rem;
+      }
+      #mob-title {
+        font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+        color: var(--accent-3); letter-spacing: 0.06em;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
+      }
+      #mob-dark-btn {
+        flex-shrink: 0; background: none;
+        border: 1px solid var(--border); color: var(--text-faint);
+        border-radius: 6px; padding: 0.2rem 0.55rem;
+        font-size: 0.7rem; cursor: pointer; white-space: nowrap;
+      }
+
+      /* Panel area */
+      #mob-panels { flex: 1; overflow: hidden; position: relative; }
+      .mob-panel {
+        position: absolute; inset: 0;
+        overflow-y: auto; display: none; flex-direction: column;
+        -webkit-overflow-scrolling: touch;
+      }
+      .mob-panel.active { display: flex; }
+
+      /* ── Files panel ── */
+      #mob-panel-files { padding: 0.5rem 0; overflow-y: auto; }
+      #mob-panel-files .folder-row { padding-left: 0.85rem; }
+      #mob-panel-files .mob-file-row {
+        display: flex; align-items: center; gap: 0.5rem;
+        padding: 0.38rem 0.75rem 0.38rem 1.9rem;
+        cursor: pointer; user-select: none;
+        transition: background 0.13s;
+        border-left: 2px solid transparent;
+      }
+      #mob-panel-files .mob-file-row:hover { background: rgba(255,255,255,0.04); }
+      #mob-panel-files .mob-file-row.active {
+        background: var(--accent-dim);
+        border-left-color: var(--accent);
+      }
+      #mob-panel-files .mob-file-row.active .file-name { color: var(--accent); }
+
+      /* ── Code panel ── */
+      #mob-no-file {
+        flex: 1; display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        color: var(--text-faint); text-align: center;
+        padding: 2rem; gap: 0.9rem;
+      }
+      #mob-nf-icon { font-size: 2.8rem; }
+      #mob-no-file p { font-size: 0.85rem; line-height: 1.65; }
+      #mob-no-file strong { color: var(--accent); }
+
+      #mob-editor { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+
+      #mob-code-toolbar {
+        height: 46px; flex-shrink: 0;
+        background: #10131f; border-bottom: 1px solid var(--border);
+        display: flex; align-items: center;
+        padding: 0 0.75rem; gap: 0.45rem;
+        overflow-x: auto; -webkit-overflow-scrolling: touch;
+      }
+      .mob-tb-btn {
+        padding: 0.3rem 0.65rem; border-radius: 5px; font-size: 0.7rem;
+        border: 1px solid var(--border); background: var(--bg-card);
+        color: var(--text-dim); cursor: pointer; white-space: nowrap;
+        font-family: 'JetBrains Mono', monospace; flex-shrink: 0;
+      }
+      .mob-tb-btn.active  { background: rgba(79,156,249,0.15); color: var(--accent); border-color: var(--accent); }
+      .mob-tb-btn.run-act { background: rgba(52,211,153,0.12); color: var(--accent-3); border-color: var(--accent-3); }
+      .mob-tb-btn.copy-flash { background: rgba(52,211,153,0.18); color: var(--accent-3); border-color: var(--accent-3); }
+      .mob-tb-sep { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; }
+
+      #mob-code-view {
+        flex: 1; overflow: auto; background: #0d0f1c;
+        -webkit-overflow-scrolling: touch;
+      }
+      #mob-code-view pre  { margin: 0; padding: 1rem 1.1rem; min-width: max-content; }
+      #mob-code-view code { font-size: 0.78rem; font-family: 'JetBrains Mono', monospace; line-height: 1.6; }
+
+      #mob-code-edit {
+        display: none; flex: 1; resize: none;
+        background: #0d0f1c; color: #cdd6f4;
+        border: none; outline: none;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.78rem; line-height: 1.6;
+        padding: 1rem 1.1rem; tab-size: 2;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* ── Preview panel ── */
+      #mob-preview-empty {
+        flex: 1; display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        color: var(--text-faint); text-align: center;
+        padding: 2rem; gap: 0.9rem;
+      }
+      #mob-preview-empty .mob-pe-icon { font-size: 2.4rem; }
+      #mob-preview-empty p { font-size: 0.85rem; line-height: 1.65; }
+      #mob-preview-empty strong { color: var(--accent-3); }
+
+      #mob-preview-frame {
+        display: none; flex: 1;
+        border: none; background: #fff;
+        width: 100%; height: 100%;
+      }
+      #mob-preview-frame.dark-mode { filter: invert(1) hue-rotate(180deg); }
+
+      /* ── Bottom tab bar ── */
+      #mob-tabbar {
+        height: 60px; flex-shrink: 0;
+        background: #10131f; border-top: 1px solid var(--border);
+        display: flex;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      .mob-tab {
+        flex: 1; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 4px;
+        color: var(--text-faint); font-size: 0.62rem; font-weight: 500;
+        border: none; background: none; cursor: pointer;
+        font-family: 'Inter', sans-serif; letter-spacing: 0.01em;
+        transition: color 0.15s; -webkit-tap-highlight-color: transparent;
+      }
+      .mob-tab svg { width: 20px; height: 20px; }
+      .mob-tab.active { color: var(--accent); }
+      .mob-tab.active svg { stroke: var(--accent); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── Tutorial code blocks (stored as plain text, retrieved by JS) ─── -->
+
+<script type="text/plain" id="code-html-01"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HTML Basics</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 580px; margin: 2rem auto; padding: 0 1.25rem; line-height: 1.6; }
+    blockquote { border-left: 4px solid #4f9cf9; margin: 1rem 0; padding: 0.6rem 1rem; background: #f0f7ff; border-radius: 0 6px 6px 0; font-style: italic; color: #444; }
+    a { color: #4f9cf9; }
+    code { background: #f0f4ff; padding: 0.1em 0.4em; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 0.9em; color: #7c3aed; }
+    hr { border: none; border-top: 1px solid #e2e8f0; margin: 1.5rem 0; }
+  </style>
+</head>
+<body>
+  <h1>HTML Basics</h1>
+
+  <h2>Headings — h1 through h6</h2>
+  <h3>This is an h3</h3>
+  <h4>This is an h4</h4>
+
+  <h2>Paragraphs &amp; Inline Elements</h2>
+  <p>HTML uses <strong>tags</strong> to structure content.
+     You can make text <em>italic</em> with &lt;em&gt; or
+     <strong>bold</strong> with &lt;strong&gt;.</p>
+  <p>Use <code>&lt;code&gt;</code> for inline code and
+     <a href="#">&lt;a href&gt;</a> for hyperlinks.</p>
+
+  <h2>Blockquote</h2>
+  <blockquote>
+    "The web does not just connect machines, it connects people."
+    — Tim Berners-Lee
+  </blockquote>
+
+  <hr>
+  <p><small>✏️ Try editing the tags above and clicking <strong>▶ Run</strong>!</small></p>
+</body>
+</html></script>
+
+<script type="text/plain" id="code-html-02"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lists &amp; Tables</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 620px; margin: 2rem auto; padding: 0 1.25rem; }
+    h2 { color: #1e293b; border-left: 3px solid #4f9cf9; padding-left: 0.75rem; margin: 1.5rem 0 0.75rem; }
+    table { border-collapse: collapse; width: 100%; margin-top: 0.5rem; font-size: 0.9rem; }
+    th { background: #4f9cf9; color: #fff; padding: 0.5rem 0.85rem; text-align: left; }
+    td { padding: 0.45rem 0.85rem; border-bottom: 1px solid #e2e8f0; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    tr:hover td { background: #f0f7ff; }
+    dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.4rem 1.25rem; align-items: baseline; }
+    dt { font-weight: 700; color: #4f9cf9; font-family: monospace; font-size: 0.9rem; }
+    dd { color: #475569; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <h1>Lists &amp; Tables</h1>
+
+  <h2>Unordered List — &lt;ul&gt;</h2>
+  <ul>
+    <li>HTML — structures content</li>
+    <li>CSS — styles content</li>
+    <li>JavaScript — adds interactivity</li>
+  </ul>
+
+  <h2>Ordered List — &lt;ol&gt;</h2>
+  <ol>
+    <li>Write the HTML markup</li>
+    <li>Add CSS styling</li>
+    <li>Layer in JavaScript behaviour</li>
+  </ol>
+
+  <h2>Definition List — &lt;dl&gt;</h2>
+  <dl>
+    <dt>HTML</dt><dd>HyperText Markup Language</dd>
+    <dt>CSS</dt> <dd>Cascading Style Sheets</dd>
+    <dt>JS</dt>  <dd>JavaScript — a scripting language for the web</dd>
+    <dt>DOM</dt> <dd>Document Object Model</dd>
+  </dl>
+
+  <h2>Table</h2>
+  <table>
+    <thead>
+      <tr><th>Tag</th><th>Purpose</th><th>Contains</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>&lt;table&gt;</td><td>Wrapper</td><td>thead, tbody, tfoot</td></tr>
+      <tr><td>&lt;thead&gt;</td><td>Header row group</td><td>tr, th</td></tr>
+      <tr><td>&lt;tbody&gt;</td><td>Body row group</td><td>tr, td</td></tr>
+      <tr><td>&lt;th&gt;</td><td>Header cell</td><td>Text / inline</td></tr>
+      <tr><td>&lt;td&gt;</td><td>Data cell</td><td>Any content</td></tr>
+    </tbody>
+  </table>
+</body>
+</html></script>
+
+<script type="text/plain" id="code-html-03"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HTML Forms</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 2rem auto; padding: 0 1.25rem; }
+    h1 { font-size: 1.4rem; margin-bottom: 1.25rem; }
+    form { display: flex; flex-direction: column; gap: 1.1rem; }
+    label { font-size: 0.82rem; font-weight: 600; color: #374151; display: block; margin-bottom: 0.25rem; }
+    input:not([type=checkbox]):not([type=radio]):not([type=range]),
+    select, textarea {
+      width: 100%; padding: 0.5rem 0.75rem; border: 1.5px solid #d1d5db;
+      border-radius: 7px; font-size: 0.9rem; font-family: inherit; color: #111;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #4f9cf9; box-shadow: 0 0 0 3px rgba(79,156,249,0.18); }
+    .row { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+    .row label { font-weight: 400; display: flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+    button { background: #4f9cf9; color: #fff; border: none; padding: 0.65rem 1.4rem; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: background 0.2s, transform 0.15s; }
+    button:hover { background: #3d8ae8; transform: translateY(-1px); }
+    #result { font-size: 0.88rem; color: #059669; font-weight: 500; min-height: 1.4em; }
+    input[type=range] { padding: 0; border: none; box-shadow: none; }
+    output { font-weight: 700; color: #4f9cf9; }
+  </style>
+</head>
+<body>
+  <h1>HTML Forms</h1>
+  <form onsubmit="handleSubmit(event)">
+    <div>
+      <label for="name">Full Name *</label>
+      <input type="text" id="name" placeholder="Dan Peltier" required>
+    </div>
+    <div>
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="dan@example.com">
+    </div>
+    <div>
+      <label for="skill">Skill Level</label>
+      <select id="skill">
+        <option value="beginner">🌱 Beginner</option>
+        <option value="intermediate" selected>🚀 Intermediate</option>
+        <option value="advanced">⚡ Advanced</option>
+      </select>
+    </div>
+    <div>
+      <label>Interests</label>
+      <div class="row">
+        <label><input type="checkbox" value="html"> HTML</label>
+        <label><input type="checkbox" value="css" checked> CSS</label>
+        <label><input type="checkbox" value="js"> JavaScript</label>
+        <label><input type="checkbox" value="jq"> jQuery</label>
+      </div>
+    </div>
+    <div>
+      <label for="exp">Years of Experience: <output id="exp-out">3</output></label>
+      <input type="range" id="exp" min="0" max="15" value="3"
+             oninput="document.querySelector('#exp-out').value=this.value">
+    </div>
+    <div>
+      <label for="bio">Short Bio</label>
+      <textarea id="bio" rows="3" placeholder="Tell us about yourself..."></textarea>
+    </div>
+    <button type="submit">Submit Form ✓</button>
+    <p id="result"></p>
+  </form>
+  <script>
+    function handleSubmit(e) {
+      e.preventDefault();
+      var name = document.querySelector('#name').value;
+      var skill = document.querySelector('#skill').value;
+      document.querySelector('#result').textContent =
+        '✅ Hello ' + name + '! Skill: ' + skill + '. Form submitted successfully.';
+    }
+  </script>
+</body>
+</html></script>
+
+<script type="text/plain" id="code-html-04"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Semantic HTML</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f1f5f9; font-size: 0.9rem; }
+    header { background: #1e293b; color: #fff; padding: 0.9rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 1rem; margin: 0; color: #e2e8f0; }
+    nav a { color: #94a3b8; text-decoration: none; margin-left: 1rem; font-size: 0.85rem; transition: color 0.2s; }
+    nav a:hover { color: #4f9cf9; }
+    .layout { display: grid; grid-template-columns: 1fr 220px; gap: 1rem; padding: 1rem; max-width: 800px; margin: 0 auto; }
+    main { background: #fff; padding: 1.25rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    article h2 { color: #1e293b; margin-top: 0; font-size: 1.1rem; }
+    article p { color: #475569; line-height: 1.65; }
+    section { margin-top: 1.1rem; padding-top: 1.1rem; border-top: 1px solid #f1f5f9; }
+    section h3 { font-size: 0.9rem; color: #334155; margin: 0 0 0.5rem; }
+    .tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .tag { background: #e0f2fe; color: #0369a1; border-radius: 4px; padding: 0.15rem 0.55rem; font-size: 0.72rem; font-family: monospace; font-weight: 600; }
+    aside { background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); height: fit-content; }
+    aside h3 { font-size: 0.75rem; color: #4f9cf9; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 0.75rem; }
+    aside ul { list-style: none; padding: 0; margin: 0; }
+    aside li { padding: 0.35rem 0; border-bottom: 1px solid #f8fafc; font-size: 0.82rem; color: #475569; }
+    aside li:last-child { border-bottom: none; }
+    footer { background: #1e293b; color: #64748b; text-align: center; padding: 0.7rem; font-size: 0.75rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🌐 My Tech Blog</h1>
+    <nav>
+      <a href="#">Home</a>
+      <a href="#">Tutorials</a>
+      <a href="#">About</a>
+    </nav>
+  </header>
+  <div class="layout">
+    <main>
+      <article>
+        <h2>Understanding Semantic HTML</h2>
+        <p>Semantic HTML uses <strong>meaningful tags</strong> that describe their purpose.
+           Unlike &lt;div&gt; and &lt;span&gt;, semantic tags tell browsers and search engines
+           <em>what</em> content means — not just how it should look.</p>
+        <section>
+          <h3>Key Semantic Tags Used on This Page</h3>
+          <div class="tags">
+            <span class="tag">&lt;header&gt;</span>
+            <span class="tag">&lt;nav&gt;</span>
+            <span class="tag">&lt;main&gt;</span>
+            <span class="tag">&lt;article&gt;</span>
+            <span class="tag">&lt;section&gt;</span>
+            <span class="tag">&lt;aside&gt;</span>
+            <span class="tag">&lt;footer&gt;</span>
+          </div>
+        </section>
+      </article>
+    </main>
+    <aside>
+      <h3>Related Topics</h3>
+      <ul>
+        <li>ARIA Accessibility</li>
+        <li>SEO Best Practices</li>
+        <li>Document Outline</li>
+        <li>Open Graph Meta</li>
+        <li>Schema.org Markup</li>
+      </ul>
+    </aside>
+  </div>
+  <footer>Built with semantic HTML — inspect with DevTools!</footer>
+</body>
+</html></script>
+
+<script type="text/plain" id="code-css-01"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CSS Selectors</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 580px; margin: 2rem auto; padding: 0 1.25rem; }
+    h2 { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin: 1.5rem 0 0.6rem; border-left: 3px solid #4f9cf9; padding-left: 0.6rem; }
+    .grid { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .box { padding: 0.45rem 0.9rem; border-radius: 6px; background: #e2e8f0; font-size: 0.85rem; font-weight: 500; color: #334155; cursor: default; }
+
+    /* 1. Element selector */
+    h1 { color: #1e293b; font-size: 1.4rem; }
+
+    /* 2. Class selector */
+    .highlight { background: #fef9c3; border: 1px solid #fbbf24; color: #92400e; }
+
+    /* 3. ID selector */
+    #special { background: #d1fae5; border: 1px solid #34d399; color: #065f46; }
+
+    /* 4. Pseudo-class :hover */
+    .box:hover { background: #4f9cf9; color: #fff; transform: scale(1.05); transition: all 0.18s ease; cursor: pointer; }
+
+    /* 5. Pseudo-element ::before */
+    .box::before { content: '▸ '; color: #a78bfa; font-size: 0.75rem; }
+
+    /* 6. Descendant combinator */
+    .parent .child { background: #dbeafe; border: 1px solid #60a5fa; color: #1e40af; }
+
+    /* 7. nth-child */
+    .grid .box:nth-child(3n+1) { border-left: 3px solid #a78bfa; }
+
+    /* 8. Attribute selector */
+    input[type="text"] {
+      border: 2px solid #34d399; padding: 0.4rem 0.75rem;
+      border-radius: 6px; outline: none; font-family: inherit; font-size: 0.9rem; width: 100%;
+    }
+    input[type="text"]:focus { border-color: #4f9cf9; box-shadow: 0 0 0 3px rgba(79,156,249,0.18); }
+    label { font-size: 0.8rem; color: #64748b; margin-bottom: 0.3rem; display: block; }
+  </style>
+</head>
+<body>
+  <h1>CSS Selectors</h1>
+
+  <h2>Element · Class · ID</h2>
+  <div class="grid">
+    <div class="box">Normal .box</div>
+    <div class="box highlight">Class: .highlight</div>
+    <div class="box" id="special">ID: #special</div>
+  </div>
+
+  <h2>:hover pseudo-class (try hovering)</h2>
+  <div class="grid">
+    <div class="box">Hover me</div>
+    <div class="box">Hover me</div>
+    <div class="box">Hover me</div>
+    <div class="box">Hover me</div>
+    <div class="box">Hover me</div>
+    <div class="box">Hover me</div>
+  </div>
+  <p style="font-size:0.78rem;color:#94a3b8">Every .box also uses ::before to inject ▸ with no extra HTML.</p>
+
+  <h2>Descendant Combinator .parent .child</h2>
+  <div class="grid parent">
+    <div class="box">item</div>
+    <div class="box child">child</div>
+    <div class="box">item</div>
+    <div class="box child">child</div>
+    <div class="box">item</div>
+  </div>
+
+  <h2>Attribute Selector input[type="text"]</h2>
+  <label>Green border applied by attribute selector, blue on :focus</label>
+  <input type="text" placeholder='input[type="text"]'>
+</body>
+</html></script>
+
+<script type="text/plain" id="code-css-02"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CSS Box Model</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 580px; margin: 2rem auto; padding: 0 1.25rem; background: #f8fafc; }
+    h1 { font-size: 1.3rem; color: #1e293b; margin-bottom: 0.25rem; }
+    h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin: 1.5rem 0 0.6rem; }
+    .diagram {
+      text-align: center; padding: 1.5rem; background: #fef3c7; border: 2px dashed #f59e0b;
+      border-radius: 6px; font-size: 0.72rem; color: #92400e; position: relative;
+    }
+    .diagram::before { content: 'MARGIN'; position: absolute; top: 4px; left: 50%; transform: translateX(-50%); font-weight: 700; }
+    .border-box { background: #fed7aa; border: 8px solid #ea580c; padding: 1.25rem; border-radius: 4px; }
+    .border-box::before { content: 'BORDER'; font-weight: 700; color: #9a3412; font-size: 0.7rem; display: block; }
+    .padding-box { background: #d1fae5; padding: 1rem; border-radius: 2px; }
+    .padding-box::before { content: 'PADDING'; font-weight: 700; color: #065f46; font-size: 0.7rem; display: block; }
+    .content-box { background: #dbeafe; padding: 0.75rem; border-radius: 2px; font-weight: 700; font-size: 0.8rem; color: #1e40af; }
+
+    .demo-grid { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; }
+    .demo-item {
+      flex: 1; min-width: 120px; background: #fff; border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden;
+      font-size: 0.78rem; text-align: center;
+    }
+    .demo-item .label { background: #1e293b; color: #94a3b8; padding: 0.3rem 0.5rem; font-size: 0.68rem; font-family: monospace; }
+    .demo-item .inner { padding: 0.5rem; }
+    .demo-item .box { background: #4f9cf9; height: 60px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.75rem; }
+    .box-a { width: 100px; }
+    .box-b { width: 100px; border: 10px solid #a78bfa; }
+    .box-c { width: 100px; padding: 16px; box-sizing: border-box; }
+    .box-d { width: 100px; margin: 0 auto; box-shadow: 0 4px 16px rgba(79,156,249,0.4); border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>The CSS Box Model</h1>
+  <p style="font-size:0.85rem;color:#475569;margin-bottom:1rem">Every element is a rectangular box with four layers:</p>
+
+  <div class="diagram">
+    <div class="border-box">
+      <div class="padding-box">
+        <div class="content-box">CONTENT</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Width, Border, Padding &amp; box-sizing</h2>
+  <div class="demo-grid">
+    <div class="demo-item">
+      <div class="label">width: 100px</div>
+      <div class="inner"><div class="box box-a">100px</div></div>
+    </div>
+    <div class="demo-item">
+      <div class="label">+ border: 10px</div>
+      <div class="inner"><div class="box box-b" style="background:#a78bfa">120px</div></div>
+    </div>
+    <div class="demo-item">
+      <div class="label">box-sizing: border-box</div>
+      <div class="inner"><div class="box box-c">100px ✓</div></div>
+    </div>
+    <div class="demo-item">
+      <div class="label">box-shadow</div>
+      <div class="inner"><div class="box box-d" style="background:#34d399;color:#fff">glow</div></div>
+    </div>
+  </div>
+  <p style="font-size:0.78rem;color:#94a3b8;margin-top:1rem">
+    💡 Tip: Add <code style="background:#f1f5f9;padding:0.1em 0.3em;border-radius:3px">box-sizing: border-box</code>
+    to <code style="background:#f1f5f9;padding:0.1em 0.3em;border-radius:3px">*</code> at the top of every stylesheet.
+  </p>
+</body>
+</html></script>
+
+<script type="text/plain" id="code-css-03"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CSS Flexbox</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 1.5rem 1.25rem; background: #f8fafc; }
+    h1 { font-size: 1.3rem; color: #1e293b; margin-bottom: 0.25rem; }
+    h2 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin: 1.25rem 0 0.5rem; }
+    .controls { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    select { padding: 0.3rem 0.6rem; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: 0.8rem; background: #fff; cursor: pointer; }
+    select:focus { outline: none; border-color: #4f9cf9; }
+    label { font-size: 0.8rem; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 0.4rem; }
+    .flex-demo {
+      display: flex; gap: 8px; background: #e0f2fe; border-radius: 8px; padding: 12px;
+      min-height: 120px; border: 2px dashed #7dd3fc; transition: all 0.3s ease;
+      flex-wrap: wrap;
+    }
+    .flex-item {
+      background: #4f9cf9; color: white; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.85rem; min-width: 44px; min-height: 44px;
+      transition: all 0.3s ease;
+    }
+    .flex-item:nth-child(1) { width: 44px; height: 44px; }
+    .flex-item:nth-child(2) { width: 60px; height: 60px; background: #a78bfa; }
+    .flex-item:nth-child(3) { width: 50px; height: 80px; background: #34d399; color: #fff; }
+    .flex-item:nth-child(4) { width: 44px; height: 50px; background: #fb923c; }
+    .code-hint { background: #1e293b; color: #94a3b8; border-radius: 6px; padding: 0.6rem 0.85rem; font-family: monospace; font-size: 0.78rem; margin-top: 0.5rem; }
+    .code-hint span { color: #34d399; }
+  </style>
+</head>
+<body>
+  <h1>CSS Flexbox</h1>
+  <p style="font-size:0.85rem;color:#475569;margin-bottom:1rem">Use the controls to see how flex properties affect layout in real time.</p>
+
+  <h2>justify-content</h2>
+  <div class="controls">
+    <label>justify-content
+      <select id="jc" onchange="updateFlex()">
+        <option value="flex-start">flex-start</option>
+        <option value="center" selected>center</option>
+        <option value="flex-end">flex-end</option>
+        <option value="space-between">space-between</option>
+        <option value="space-around">space-around</option>
+        <option value="space-evenly">space-evenly</option>
+      </select>
+    </label>
+    <label>align-items
+      <select id="ai" onchange="updateFlex()">
+        <option value="flex-start">flex-start</option>
+        <option value="center" selected>center</option>
+        <option value="flex-end">flex-end</option>
+        <option value="stretch">stretch</option>
+        <option value="baseline">baseline</option>
+      </select>
+    </label>
+    <label>flex-direction
+      <select id="fd" onchange="updateFlex()">
+        <option value="row" selected>row</option>
+        <option value="row-reverse">row-reverse</option>
+        <option value="column">column</option>
+        <option value="column-reverse">column-reverse</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="flex-demo" id="demo">
+    <div class="flex-item">1</div>
+    <div class="flex-item">2</div>
+    <div class="flex-item">3</div>
+    <div class="flex-item">4</div>
+  </div>
+
+  <div class="code-hint" id="code-display">
+    display: flex;<br>
+    <span>justify-content: center;</span><br>
+    <span>align-items: center;</span><br>
+    flex-direction: row;
+  </div>
+
+  <script>
+    function updateFlex() {
+      var demo = document.querySelector('#demo');
+      var jc = document.querySelector('#jc').value;
+      var ai = document.querySelector('#ai').value;
+      var fd = document.querySelector('#fd').value;
+      demo.style.justifyContent = jc;
+      demo.style.alignItems = ai;
+      demo.style.flexDirection = fd;
+      document.querySelector('#code-display').innerHTML =
+        'display: flex;<br><span>justify-content: ' + jc + ';</span><br>' +
+        '<span>align-items: ' + ai + ';</span><br>flex-direction: ' + fd + ';';
+    }
+    updateFlex();
+  </script>
+</body>
+</html></script>
+
+<script type="text/plain" id="code-css-04"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CSS Grid</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 1.5rem 1.25rem; background: #f8fafc; }
+    h1 { font-size: 1.3rem; color: #1e293b; margin-bottom: 0.25rem; }
+    h2 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin: 1.5rem 0 0.5rem; }
+    .grid { display: grid; gap: 8px; background: #e0f2fe; border-radius: 8px; padding: 10px; border: 2px dashed #7dd3fc; }
+    .cell { background: #4f9cf9; color: #fff; border-radius: 6px; padding: 0.6rem 0.75rem; font-size: 0.82rem; font-weight: 600; min-height: 48px; display: flex; align-items: center; justify-content: center; text-align: center; transition: all 0.3s; }
+    .cell:nth-child(2) { background: #a78bfa; }
+    .cell:nth-child(3) { background: #34d399; }
+    .cell:nth-child(4) { background: #fb923c; }
+    .cell:nth-child(5) { background: #f472b6; }
+    .cell:nth-child(6) { background: #60a5fa; }
+    /* Named grid areas */
+    .page { display: grid; grid-template-columns: 1fr 200px; grid-template-rows: auto 1fr auto; grid-template-areas: "header header" "main   sidebar" "footer footer"; gap: 8px; min-height: 200px; }
+    .area-header  { grid-area: header;  background: #1e293b; color: #e2e8f0; }
+    .area-main    { grid-area: main;    background: #fff; color: #334155; }
+    .area-sidebar { grid-area: sidebar; background: #f1f5f9; color: #475569; }
+    .area-footer  { grid-area: footer;  background: #334155; color: #94a3b8; }
+    .controls { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    select { padding: 0.3rem 0.6rem; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: 0.8rem; background: #fff; cursor: pointer; }
+    label { font-size: 0.8rem; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 0.4rem; }
+    .code-hint { background: #1e293b; color: #94a3b8; border-radius: 6px; padding: 0.6rem 0.85rem; font-family: monospace; font-size: 0.78rem; margin-top: 0.5rem; }
+    .code-hint span { color: #34d399; }
+  </style>
+</head>
+<body>
+  <h1>CSS Grid</h1>
+
+  <h2>Auto Columns</h2>
+  <div class="controls">
+    <label>grid-template-columns
+      <select id="cols" onchange="updateGrid()">
+        <option value="repeat(2,1fr)">repeat(2, 1fr)</option>
+        <option value="repeat(3,1fr)" selected>repeat(3, 1fr)</option>
+        <option value="repeat(4,1fr)">repeat(4, 1fr)</option>
+        <option value="200px 1fr 200px">200px 1fr 200px</option>
+        <option value="repeat(auto-fit,minmax(120px,1fr))">auto-fit minmax</option>
+      </select>
+    </label>
+  </div>
+  <div class="grid" id="demo">
+    <div class="cell">1</div>
+    <div class="cell">2</div>
+    <div class="cell">3</div>
+    <div class="cell">4</div>
+    <div class="cell">5</div>
+    <div class="cell">6</div>
+  </div>
+  <div class="code-hint" id="code-display">
+    display: grid;<br><span>grid-template-columns: repeat(3, 1fr);</span><br>gap: 8px;
+  </div>
+
+  <h2>Named Grid Areas</h2>
+  <div class="page">
+    <div class="cell area-header">header</div>
+    <div class="cell area-main">main</div>
+    <div class="cell area-sidebar">sidebar</div>
+    <div class="cell area-footer">footer</div>
+  </div>
+
+  <script>
+    function updateGrid() {
+      var cols = document.querySelector('#cols').value;
+      document.querySelector('#demo').style.gridTemplateColumns = cols;
+      document.querySelector('#code-display').innerHTML =
+        'display: grid;<br><span>grid-template-columns: ' + cols + ';</span><br>gap: 8px;';
+    }
+  </script>
+</body>
+</html></script>
+
+<script type="text/plain" id="code-css-05"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CSS Animations</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 580px; margin: 0 auto; padding: 1.5rem 1.25rem; background: #0f172a; color: #e2e8f0; }
+    h2 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; color: #4f9cf9; margin: 1.75rem 0 0.75rem; }
+    .row { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+    p { font-size: 0.82rem; color: #94a3b8; line-height: 1.55; }
+
+    /* Gradient animated title */
+    @keyframes gradient { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+    .grad-title {
+      background: linear-gradient(270deg,#4f9cf9,#a78bfa,#34d399,#4f9cf9);
+      background-size: 400% 400%; animation: gradient 4s ease infinite;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      font-size: 1.6rem; font-weight: 800; margin-bottom: 0.25rem;
+    }
+
+    /* Hover transition */
+    .t-box { width: 64px; height: 64px; border-radius: 10px; background: #4f9cf9; cursor: pointer; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.3s ease; }
+    .t-box:hover { transform: scale(1.25) rotate(18deg); background: #a78bfa; }
+
+    /* Pulse */
+    @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.18);opacity:0.7} }
+    .pulse { animation: pulse 1.4s ease-in-out infinite; background: #34d399; }
+
+    /* Spinner */
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .spinner { width: 48px; height: 48px; border-radius: 50%; border: 3px solid rgba(79,156,249,0.15); border-top-color: #4f9cf9; animation: spin 0.75s linear infinite; }
+
+    /* Bounce */
+    @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-22px)} }
+    .bounce-box { width: 48px; height: 48px; border-radius: 10px; background: #fb923c; animation: bounce 1s ease-in-out infinite; }
+
+    /* Slide in on load */
+    @keyframes slideIn { from{transform:translateX(-60px);opacity:0} to{transform:translateX(0);opacity:1} }
+    .slide { animation: slideIn 0.55s cubic-bezier(0.22,1,0.36,1) both; width: 64px; height: 48px; border-radius: 10px; background: #f472b6; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; }
+
+    /* Typewriter */
+    @keyframes type { from{width:0} to{width:100%} }
+    @keyframes blink { 50%{border-color:transparent} }
+    .typewriter { font-family: monospace; font-size: 1rem; white-space: nowrap; overflow: hidden; width: 0; border-right: 2px solid #4f9cf9; animation: type 2.5s steps(28) forwards, blink 0.7s step-end infinite; color: #34d399; }
+  </style>
+</head>
+<body>
+  <h1 class="grad-title">CSS Animations</h1>
+  <p style="margin-bottom:0.5rem">Click run to restart. Hover the first box for the transition demo.</p>
+
+  <h2>Hover Transition</h2>
+  <div class="row"><div class="t-box"></div><p>transform + background via <code style="color:#a78bfa">transition:</code> — triggered by :hover.</p></div>
+
+  <h2>@keyframes: Pulse</h2>
+  <div class="row"><div class="t-box pulse"></div><p>Scale oscillates 1 → 1.18 → 1 every 1.4 seconds.</p></div>
+
+  <h2>@keyframes: Spinner</h2>
+  <div class="row"><div class="spinner"></div><p>Border trick — one side coloured, others transparent + <code style="color:#a78bfa">rotate(360deg)</code>.</p></div>
+
+  <h2>@keyframes: Bounce</h2>
+  <div class="row"><div class="bounce-box"></div><p>translateY oscillates 0 → −22px → 0 with ease-in-out.</p></div>
+
+  <h2>@keyframes: Slide In (on load)</h2>
+  <div class="row"><div class="slide">slide</div><p>translateX(−60px) → 0 with cubic-bezier spring easing.</p></div>
+
+  <h2>@keyframes: Typewriter</h2>
+  <div class="typewriter">Animating width + blinking caret...</div>
+</body>
+</html></script>
+
+<textarea style="display:none" id="code-js-01"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JS Variables &amp; Types</title>
+  <style>
+    body { font-family: 'JetBrains Mono', monospace, system-ui; max-width: 560px; margin: 2rem auto; padding: 0 1.25rem; background: #0f172a; color: #e2e8f0; font-size: 0.88rem; }
+    h1 { font-size: 1.2rem; color: #4f9cf9; margin-bottom: 0.25rem; font-family: system-ui; }
+    h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; color: #4f9cf9; margin: 1.5rem 0 0.5rem; }
+    .output { background: #1e293b; border-radius: 8px; padding: 0.85rem 1rem; line-height: 1.7; }
+    .key { color: #a78bfa; } .val { color: #34d399; } .type { color: #94a3b8; font-size: 0.8em; }
+    button { margin-top: 1rem; background: #4f9cf9; color: #fff; border: none; padding: 0.5rem 1.1rem; border-radius: 7px; font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+    button:hover { background: #3d8ae8; }
+    .tag { display: inline-block; padding: 0.1em 0.45em; border-radius: 4px; font-size: 0.78em; margin: 0.1em; }
+    .t-str { background: rgba(52,211,153,0.15); color: #34d399; }
+    .t-num { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .t-bool { background: rgba(167,139,250,0.15); color: #a78bfa; }
+    .t-null { background: rgba(248,113,113,0.15); color: #f87171; }
+  </style>
+</head>
+<body>
+  <h1>JS Variables &amp; Types</h1>
+  <p style="color:#94a3b8;margin-bottom:1rem">Click the button to run the demo and see output.</p>
+
+  <h2>Declarations</h2>
+  <div class="output" id="decl-output">Click "Run Demo" to see output.</div>
+
+  <h2>Template Literals</h2>
+  <div class="output" id="tpl-output"></div>
+
+  <h2>Type Coercion &amp; typeof</h2>
+  <div class="output" id="type-output"></div>
+
+  <button onclick="runDemo()">▶ Run Demo</button>
+
+  <script>
+    function runDemo() {
+      /* --- Declarations --- */
+      let score = 42;
+      const name = 'Dan';
+      var legacy = true;
+      score = 99; // let can be reassigned
+      // const name = 'other'; // ERROR — const cannot be reassigned
+
+      document.querySelector('#decl-output').innerHTML =
+        '<span class="key">let</span> score = <span class="val">' + score + '</span> <span class="type">(number — reassignable)</span><br>' +
+        '<span class="key">const</span> name = <span class="val">"' + name + '"</span> <span class="type">(string — cannot reassign)</span><br>' +
+        '<span class="key">var</span> legacy = <span class="val">' + legacy + '</span> <span class="type">(avoid in modern JS)</span>';
+
+      /* --- Template literals --- */
+      const greeting = `Hello, ${name}! Your score is ${score > 50 ? '🎉 ' + score : score}.`;
+      const multiLine = `Line 1\nLine 2\nLine 3`;
+      document.querySelector('#tpl-output').innerHTML =
+        '<span class="val">`' + greeting + '`</span><br>' +
+        '<span class="type">// multi-line strings work natively</span><br>' +
+        multiLine.split('\n').map(l => '<span class="val">' + l + '</span>').join('<br>');
+
+      /* --- typeof --- */
+      var examples = [
+        ['string', 'hello'], ['number', 42], ['boolean', true],
+        ['null', null], ['undefined', undefined], ['object', {a:1}], ['array', [1,2,3]],
+      ];
+      var typeHtml = examples.map(([label, val]) =>
+        '<span class="key">typeof</span> <span class="' +
+        (label==='string'?'t-str':label==='number'?'t-num':label==='boolean'?'t-bool':'t-null') +
+        ' tag">' + label + '</span>' +
+        ' → <span class="val">"' + typeof val + '"</span>' +
+        (Array.isArray(val) ? ' <span class="type">(Array.isArray → true)</span>' : '')
+      ).join('<br>');
+      document.querySelector('#type-output').innerHTML = typeHtml;
+    }
+  </script>
+</body>
+</html></textarea>
+
+<textarea style="display:none" id="code-js-02"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JS Functions</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 560px; margin: 2rem auto; padding: 0 1.25rem; background: #0f172a; color: #e2e8f0; }
+    h1 { font-size: 1.2rem; color: #4f9cf9; }
+    h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin: 1.4rem 0 0.5rem; }
+    .card { background: #1e293b; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; }
+    .result { color: #34d399; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; }
+    input[type=number] { background: #0f172a; border: 1.5px solid #334155; color: #e2e8f0; padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.9rem; width: 80px; font-family: inherit; }
+    input:focus { outline: none; border-color: #4f9cf9; }
+    button { background: #4f9cf9; color: #fff; border: none; padding: 0.4rem 0.9rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; margin-left: 0.5rem; }
+    button:hover { background: #3d8ae8; }
+    .label { font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.5rem; font-family: 'JetBrains Mono', monospace; }
+    .tag { display: inline-block; padding: 0.1em 0.5em; border-radius: 4px; font-size: 0.75em; background: rgba(167,139,250,0.15); color: #a78bfa; margin-right: 0.3em; }
+  </style>
+</head>
+<body>
+  <h1>JS Functions</h1>
+
+  <h2>Function Declaration</h2>
+  <div class="card">
+    <div class="label">function greet(name) { ... }</div>
+    <input type="text" id="gname" placeholder="Dan" style="width:140px;background:#0f172a;border:1.5px solid #334155;color:#e2e8f0;padding:0.4rem 0.6rem;border-radius:6px;font-size:0.9rem;outline:none;font-family:inherit">
+    <button onclick="runGreet()">Call</button>
+    <div class="result" id="greet-out" style="margin-top:0.6rem"></div>
+  </div>
+
+  <h2>Arrow Functions</h2>
+  <div class="card">
+    <div class="label">const double = n =&gt; n * 2 &nbsp;|&nbsp; const add = (a,b) =&gt; a + b</div>
+    <input type="number" id="arnum" value="7">
+    <button onclick="runArrow()">Call</button>
+    <div class="result" id="arrow-out" style="margin-top:0.6rem"></div>
+  </div>
+
+  <h2>Default Parameters</h2>
+  <div class="card">
+    <div class="label">function power(base, exp = 2) { return base ** exp; }</div>
+    Base: <input type="number" id="pbase" value="3" style="width:60px">
+    Exp: <input type="number" id="pexp" placeholder="(default: 2)" style="width:120px">
+    <button onclick="runPower()">Call</button>
+    <div class="result" id="power-out" style="margin-top:0.6rem"></div>
+  </div>
+
+  <h2>Closures</h2>
+  <div class="card">
+    <div class="label">function makeCounter() { let count=0; return () =&gt; ++count; }</div>
+    <button onclick="tick()">Increment counter</button>
+    <div class="result" id="counter-out" style="margin-top:0.6rem">counter = 0</div>
+  </div>
+
+  <h2>Higher-Order Functions</h2>
+  <div class="card">
+    <div class="label">[1..10].filter(n =&gt; n % 2 === 0).map(n =&gt; n * n)</div>
+    <button onclick="runHOF()">Run</button>
+    <div class="result" id="hof-out" style="margin-top:0.6rem"></div>
+  </div>
+
+  <script>
+    function greet(name) { return 'Hello, ' + (name || 'stranger') + '! 👋'; }
+    document.querySelector('#gname').value = 'Dan';
+
+    function runGreet() {
+      var n = document.querySelector('#gname').value;
+      document.querySelector('#greet-out').textContent = '→ ' + greet(n);
+    }
+    function runArrow() {
+      var n = parseFloat(document.querySelector('#arnum').value) || 0;
+      var double = x => x * 2;
+      var add = (a, b) => a + b;
+      document.querySelector('#arrow-out').textContent =
+        '→ double(' + n + ') = ' + double(n) + '\n→ add(' + n + ', 10) = ' + add(n, 10);
+    }
+    function power(base, exp = 2) { return base ** exp; }
+    function runPower() {
+      var b = parseFloat(document.querySelector('#pbase').value);
+      var e = document.querySelector('#pexp').value;
+      var result = e !== '' ? power(b, parseFloat(e)) : power(b);
+      document.querySelector('#power-out').textContent =
+        '→ power(' + b + (e !== '' ? ', ' + e : '') + ') = ' + result;
+    }
+    function makeCounter() { let count = 0; return () => ++count; }
+    var counter = makeCounter();
+    function tick() {
+      document.querySelector('#counter-out').textContent = 'counter = ' + counter();
+    }
+    function runHOF() {
+      var result = [1,2,3,4,5,6,7,8,9,10].filter(n => n % 2 === 0).map(n => n * n);
+      document.querySelector('#hof-out').textContent = '→ [' + result.join(', ') + ']';
+    }
+  </script>
+</body>
+</html></textarea>
+
+<textarea style="display:none" id="code-js-03"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JS DOM Manipulation</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 540px; margin: 2rem auto; padding: 0 1.25rem; }
+    h1 { font-size: 1.3rem; color: #1e293b; }
+    h2 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin: 1.4rem 0 0.5rem; }
+    .demo { background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 1rem; min-height: 60px; }
+    .controls { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+    button { padding: 0.4rem 0.9rem; border: none; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.18s; }
+    .btn-blue  { background: #4f9cf9; color: #fff; } .btn-blue:hover  { background: #3d8ae8; }
+    .btn-purp  { background: #a78bfa; color: #fff; } .btn-purp:hover  { background: #8b5cf6; }
+    .btn-green { background: #34d399; color: #fff; } .btn-green:hover { background: #10b981; }
+    .btn-red   { background: #f87171; color: #fff; } .btn-red:hover   { background: #ef4444; }
+    .added-item { background: #dbeafe; border: 1px solid #93c5fd; border-radius: 6px; padding: 0.4rem 0.75rem; margin: 0.3rem 0; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+    .added-item button { background: none; color: #f87171; padding: 0 0.3rem; font-size: 1rem; font-weight: 700; border: none; cursor: pointer; }
+    #live-text { font-size: 1.1rem; font-weight: 600; color: #1e293b; min-height: 1.4em; transition: color 0.3s; }
+    input.txt-in { padding: 0.4rem 0.7rem; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem; flex: 1; }
+    input.txt-in:focus { outline: none; border-color: #4f9cf9; }
+  </style>
+</head>
+<body>
+  <h1>JS DOM Manipulation</h1>
+
+  <h2>1. querySelector &amp; innerHTML</h2>
+  <div class="controls">
+    <button class="btn-blue" onclick="setText()">Change Text</button>
+    <button class="btn-purp" onclick="setColor()">Toggle Color</button>
+    <button class="btn-green" onclick="addEmoji()">Add Emoji</button>
+  </div>
+  <div class="demo"><div id="live-text">Hello! Click the buttons above.</div></div>
+
+  <h2>2. createElement &amp; appendChild</h2>
+  <div class="controls">
+    <input class="txt-in" id="new-item" placeholder="Type an item..." oninput="" />
+    <button class="btn-blue" onclick="addItem()">Add Item</button>
+  </div>
+  <div class="demo" id="list-demo"><p style="color:#94a3b8;font-size:0.85rem">Items will appear here...</p></div>
+
+  <h2>3. classList — toggle classes</h2>
+  <div class="controls">
+    <button class="btn-blue"  onclick="toggleClass('highlighted')">toggle .highlighted</button>
+    <button class="btn-purp"  onclick="toggleClass('shadowed')">toggle .shadowed</button>
+    <button class="btn-green" onclick="toggleClass('rotated')">toggle .rotated</button>
+  </div>
+  <div class="demo" style="display:flex;justify-content:center">
+    <div id="class-box" style="width:80px;height:80px;background:#4f9cf9;border-radius:10px;transition:all 0.3s"></div>
+  </div>
+  <style>
+    .highlighted { background: #fbbf24 !important; }
+    .shadowed { box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+    .rotated { transform: rotate(30deg); }
+  </style>
+
+  <script>
+    var colors = ['#4f9cf9','#a78bfa','#34d399','#fb923c','#f472b6'];
+    var ci = 0;
+    var emojis = ['🎉','🚀','⚡','🔥','💡'];
+    var ei = 0;
+    var itemCount = 0;
+
+    function setText() {
+      document.querySelector('#live-text').textContent = 'Text changed via querySelector! ✏️';
+    }
+    function setColor() {
+      ci = (ci + 1) % colors.length;
+      document.querySelector('#live-text').style.color = colors[ci];
+    }
+    function addEmoji() {
+      var el = document.querySelector('#live-text');
+      el.textContent += ' ' + emojis[ei++ % emojis.length];
+    }
+    function addItem() {
+      var input = document.querySelector('#new-item');
+      var text = input.value.trim();
+      if (!text) return;
+      var container = document.querySelector('#list-demo');
+      if (container.querySelector('p')) container.innerHTML = '';
+      var item = document.createElement('div');
+      item.className = 'added-item';
+      item.innerHTML = '<span>' + ++itemCount + '. ' + text + '</span><button onclick="this.parentElement.remove()">×</button>';
+      container.appendChild(item);
+      input.value = '';
+      input.focus();
+    }
+    function toggleClass(cls) {
+      document.querySelector('#class-box').classList.toggle(cls);
+    }
+  </script>
+</body>
+</html></textarea>
+
+<textarea style="display:none" id="code-js-04"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JS Events</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 540px; margin: 2rem auto; padding: 0 1.25rem; }
+    h1 { font-size: 1.3rem; color: #1e293b; }
+    h2 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin: 1.4rem 0 0.5rem; }
+    .demo { background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 1rem; margin-bottom: 0.25rem; }
+    .log { background: #0f172a; border-radius: 7px; padding: 0.65rem 0.85rem; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #94a3b8; max-height: 90px; overflow-y: auto; }
+    .log .new { color: #34d399; }
+    button { padding: 0.45rem 0.9rem; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+    .btn-blue { background: #4f9cf9; color: #fff; } .btn-blue:hover { background: #3d8ae8; }
+    #hover-zone { width: 100%; height: 60px; border-radius: 8px; background: #e0f2fe; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: #0369a1; font-weight: 500; transition: all 0.2s; user-select: none; }
+    #hover-zone.over { background: #bae6fd; transform: scale(1.02); }
+    input.evt-in { padding: 0.45rem 0.75rem; border: 1.5px solid #e2e8f0; border-radius: 7px; font-size: 0.9rem; width: 100%; font-family: inherit; }
+    input.evt-in:focus { outline: none; border-color: #4f9cf9; }
+    .del-list { list-style: none; padding: 0; }
+    .del-list li { display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.75rem; background: #f1f5f9; border-radius: 6px; margin-bottom: 0.3rem; font-size: 0.85rem; }
+    .del-list li button { background: none; color: #f87171; border: none; font-size: 1rem; font-weight: 700; padding: 0 0.2rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>JS Events</h1>
+
+  <h2>1. addEventListener — click</h2>
+  <div class="demo">
+    <button class="btn-blue" id="click-btn">Click me</button>
+    <span id="click-count" style="margin-left:0.75rem;font-size:0.85rem;color:#475569">0 clicks</span>
+  </div>
+
+  <h2>2. mouseover / mouseleave</h2>
+  <div class="demo">
+    <div id="hover-zone">Hover over me</div>
+    <div class="log" id="hover-log" style="margin-top:0.5rem">Waiting...</div>
+  </div>
+
+  <h2>3. input event — live typing</h2>
+  <div class="demo">
+    <input class="evt-in" id="type-in" placeholder="Type something...">
+    <div class="log" style="margin-top:0.5rem" id="type-log">Waiting...</div>
+  </div>
+
+  <h2>4. Event Delegation — click a child from the parent</h2>
+  <div class="demo">
+    <ul class="del-list" id="del-list">
+      <li>Item Alpha <button>×</button></li>
+      <li>Item Beta <button>×</button></li>
+      <li>Item Gamma <button>×</button></li>
+    </ul>
+    <p style="font-size:0.78rem;color:#94a3b8;margin-top:0.25rem">One listener on &lt;ul&gt; handles all × buttons — even new ones.</p>
+  </div>
+
+  <script>
+    /* 1. click */
+    var clicks = 0;
+    document.querySelector('#click-btn').addEventListener('click', function(e) {
+      document.querySelector('#click-count').textContent = ++clicks + ' click' + (clicks !== 1 ? 's' : '');
+      e.target.textContent = clicks >= 10 ? '🎉 ' + clicks + '!' : 'Click me';
+    });
+
+    /* 2. hover */
+    var hzone = document.querySelector('#hover-zone');
+    var hlog  = document.querySelector('#hover-log');
+    hzone.addEventListener('mouseover',  function() { hzone.classList.add('over'); hlog.innerHTML = '<span class="new">mouseover fired ↗</span>'; });
+    hzone.addEventListener('mouseleave', function() { hzone.classList.remove('over'); hlog.innerHTML = 'mouseleave fired ↙ (mouse left)'; });
+
+    /* 3. input */
+    document.querySelector('#type-in').addEventListener('input', function(e) {
+      var v = e.target.value;
+      document.querySelector('#type-log').innerHTML =
+        '<span class="new">input event</span> → value: "' + v + '" · length: ' + v.length;
+    });
+
+    /* 4. delegation */
+    document.querySelector('#del-list').addEventListener('click', function(e) {
+      if (e.target.tagName === 'BUTTON') {
+        e.target.closest('li').style.animation = 'none';
+        e.target.closest('li').style.opacity = '0';
+        e.target.closest('li').style.transform = 'translateX(20px)';
+        e.target.closest('li').style.transition = 'all 0.25s';
+        setTimeout(function() { e.target.closest('li').remove(); }, 240);
+      }
+    });
+  </script>
+</body>
+</html></textarea>
+
+<textarea style="display:none" id="code-js-05"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fetch API</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 560px; margin: 2rem auto; padding: 0 1.25rem; background: #0f172a; color: #e2e8f0; }
+    h1 { font-size: 1.3rem; color: #4f9cf9; }
+    h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin: 1.5rem 0 0.6rem; }
+    button { background: #4f9cf9; color: #fff; border: none; padding: 0.5rem 1.1rem; border-radius: 7px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    button:hover { background: #3d8ae8; } button:disabled { opacity: 0.5; cursor: default; }
+    .card { background: #1e293b; border-radius: 10px; padding: 1rem 1.15rem; margin-top: 0.75rem; }
+    .card .name { font-size: 1rem; font-weight: 700; color: #e2e8f0; margin-bottom: 0.25rem; }
+    .card .body { font-size: 0.85rem; color: #94a3b8; line-height: 1.6; }
+    .card .meta { font-size: 0.72rem; font-family: 'JetBrains Mono', monospace; color: #4f9cf9; margin-bottom: 0.4rem; }
+    .spinner { display: none; width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid rgba(79,156,249,0.2); border-top-color: #4f9cf9; animation: spin 0.75s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .error-box { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); border-radius: 8px; padding: 0.75rem 1rem; color: #f87171; font-size: 0.85rem; margin-top: 0.75rem; }
+    .user-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 0.75rem; }
+    .user-card { background: #1e293b; border-radius: 8px; padding: 0.75rem 0.9rem; }
+    .user-card .u-name { font-weight: 600; font-size: 0.88rem; color: #e2e8f0; }
+    .user-card .u-email { font-size: 0.75rem; color: #64748b; font-family: monospace; }
+    .controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    select { background: #1e293b; color: #e2e8f0; border: 1.5px solid #334155; padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <h1>The Fetch API</h1>
+  <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:0.5rem">All data from JSONPlaceholder — a free, public REST API for testing.</p>
+
+  <h2>1. async / await — fetch a post</h2>
+  <div class="controls">
+    <select id="post-id">
+      <option value="1">Post #1</option><option value="2">Post #2</option>
+      <option value="3">Post #3</option><option value="5">Post #5</option>
+      <option value="10">Post #10</option>
+    </select>
+    <button id="fetch-btn" onclick="fetchPost()">Fetch Post</button>
+    <div class="spinner" id="post-spin"></div>
+  </div>
+  <div id="post-result"></div>
+
+  <h2>2. Promise chaining — .then() / .catch()</h2>
+  <div class="controls">
+    <button onclick="fetchUsers()">Fetch Users</button>
+    <div class="spinner" id="user-spin"></div>
+  </div>
+  <div id="user-result"></div>
+
+  <h2>3. Error handling</h2>
+  <button onclick="fetchBroken()">Fetch Invalid URL</button>
+  <div id="err-result"></div>
+
+  <script>
+    async function fetchPost() {
+      var id = document.querySelector('#post-id').value;
+      var btn = document.querySelector('#fetch-btn');
+      var spin = document.querySelector('#post-spin');
+      btn.disabled = true; spin.style.display = 'block';
+      document.querySelector('#post-result').innerHTML = '';
+      try {
+        var res = await fetch('https://jsonplaceholder.typicode.com/posts/' + id);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var data = await res.json();
+        document.querySelector('#post-result').innerHTML =
+          '<div class="card"><div class="meta">POST #' + data.id + '</div>' +
+          '<div class="name">' + data.title + '</div>' +
+          '<div class="body">' + data.body + '</div></div>';
+      } catch (err) {
+        document.querySelector('#post-result').innerHTML = '<div class="error-box">Error: ' + err.message + '</div>';
+      } finally {
+        btn.disabled = false; spin.style.display = 'none';
+      }
+    }
+
+    function fetchUsers() {
+      var spin = document.querySelector('#user-spin');
+      spin.style.display = 'block';
+      document.querySelector('#user-result').innerHTML = '';
+      fetch('https://jsonplaceholder.typicode.com/users?_limit=6')
+        .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+        .then(function(users) {
+          var html = '<div class="user-grid">' + users.map(function(u) {
+            return '<div class="user-card"><div class="u-name">' + u.name + '</div><div class="u-email">' + u.email + '</div></div>';
+          }).join('') + '</div>';
+          document.querySelector('#user-result').innerHTML = html;
+        })
+        .catch(function(err) {
+          document.querySelector('#user-result').innerHTML = '<div class="error-box">Error: ' + err.message + '</div>';
+        })
+        .finally(function() { spin.style.display = 'none'; });
+    }
+
+    function fetchBroken() {
+      document.querySelector('#err-result').innerHTML = '';
+      fetch('https://this-does-not-exist-404.invalid/api')
+        .then(function(r) { return r.json(); })
+        .catch(function(err) {
+          document.querySelector('#err-result').innerHTML =
+            '<div class="error-box">✓ Caught: ' + err.message + '<br><span style="color:#94a3b8;font-size:0.8em">Always wrap fetch in try/catch or .catch()!</span></div>';
+        });
+    }
+  </script>
+</body>
+</html></textarea>
+
+<textarea id="code-jq-01" style="display:none"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>jQuery Selectors</title>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 560px; margin: 2rem auto; padding: 0 1.25rem; }
+    h1 { font-size: 1.3rem; color: #1e293b; margin-bottom: 0.25rem; }
+    h2 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin: 1.4rem 0 0.5rem; }
+    .demo { background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 1rem; }
+    .box { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 8px; background: #e2e8f0; font-size: 0.85rem; font-weight: 700; color: #475569; margin: 0.25rem; cursor: pointer; transition: all 0.2s; user-select: none; }
+    .box.active-item { background: #4f9cf9 !important; color: #fff; transform: scale(1.12); }
+    button { padding: 0.38rem 0.85rem; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; margin: 0.2rem; transition: all 0.18s; }
+    .btn-blue  { background: #4f9cf9; color: #fff; } .btn-blue:hover  { background: #3d8ae8; }
+    .btn-purp  { background: #a78bfa; color: #fff; } .btn-purp:hover  { background: #8b5cf6; }
+    .btn-green { background: #34d399; color: #fff; } .btn-green:hover { background: #10b981; }
+    .btn-red   { background: #f87171; color: #fff; } .btn-red:hover   { background: #ef4444; }
+    .log { background: #0f172a; border-radius: 7px; padding: 0.55rem 0.85rem; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #94a3b8; margin-top: 0.5rem; min-height: 2em; }
+    .log .hi { color: #34d399; }
+    .parent-box { background: #f0fdf4; border: 1.5px dashed #86efac; border-radius: 8px; padding: 0.75rem; }
+    .child-item { display: inline-block; padding: 0.3rem 0.7rem; background: #dcfce7; border-radius: 5px; margin: 0.2rem; font-size: 0.82rem; color: #166534; }
+    .child-item.special { background: #fef9c3; color: #92400e; }
+  </style>
+</head>
+<body>
+  <h1>jQuery Selectors</h1>
+  <p style="font-size:0.85rem;color:#64748b;margin-bottom:0.5rem">jQuery wraps CSS selector syntax in <code style="background:#f1f5f9;padding:0.1em 0.3em;border-radius:3px">$()</code> for powerful DOM querying.</p>
+
+  <h2>Basic selectors</h2>
+  <div class="demo">
+    <div class="box" id="b1">1</div>
+    <div class="box" id="b2">2</div>
+    <div class="box special-box" id="b3">3</div>
+    <div class="box" id="b4">4</div>
+    <div class="box special-box" id="b5">5</div>
+    <div class="box" id="b6">6</div>
+    <br>
+    <button class="btn-blue"  onclick="$('.box').addClass('active-item')">$('.box') all</button>
+    <button class="btn-purp"  onclick="$('#b3').toggleClass('active-item')">#b3 by ID</button>
+    <button class="btn-green" onclick="$('.special-box').toggleClass('active-item')">.special-box</button>
+    <button class="btn-red"   onclick="$('.box').removeClass('active-item')">Clear all</button>
+    <div class="log" id="log1">Click a button above</div>
+  </div>
+
+  <h2>.find() — search within a container</h2>
+  <div class="demo">
+    <div class="parent-box" id="parent">
+      <span class="child-item">Alpha</span>
+      <span class="child-item special">Beta ★</span>
+      <span class="child-item">Gamma</span>
+      <span class="child-item special">Delta ★</span>
+      <span class="child-item">Epsilon</span>
+    </div>
+    <br>
+    <button class="btn-blue"  onclick="findAll()">$('#parent').find('.child-item')</button>
+    <button class="btn-purp"  onclick="findSpecial()">find('.special')</button>
+    <div class="log" id="log2">Click a button above</div>
+  </div>
+
+  <h2>:eq(), :first, :last, :odd, :even</h2>
+  <div class="demo">
+    <div class="box" style="background:#e2e8f0">A</div>
+    <div class="box" style="background:#e2e8f0">B</div>
+    <div class="box" style="background:#e2e8f0">C</div>
+    <div class="box" style="background:#e2e8f0">D</div>
+    <div class="box" style="background:#e2e8f0">E</div>
+    <br>
+    <button class="btn-blue"  onclick="$('.demo:last .box:first').css('background','#4f9cf9')">:first</button>
+    <button class="btn-purp"  onclick="$('.demo:last .box:last').css('background','#a78bfa')">:last</button>
+    <button class="btn-green" onclick="$('.demo:last .box:even').css('background','#34d399')">:even</button>
+    <button class="btn-red"   onclick="$('.demo:last .box:odd').css('background','#fb923c')">:odd</button>
+  </div>
+
+  <script>
+    $('.box').on('click', function() {
+      var id = $(this).attr('id');
+      $('#log1').html('<span class="hi">Clicked:</span> $(\'#' + id + '\') — contains: "' + $(this).text() + '"');
+    });
+    function findAll() {
+      var count = $('#parent').find('.child-item').length;
+      $('#log2').html('<span class="hi">Found ' + count + ' .child-item elements</span> inside #parent');
+      $('#parent .child-item').css({'background':'#bfdbfe','color':'#1e40af'});
+    }
+    function findSpecial() {
+      var found = $('#parent').find('.special');
+      $('#log2').html('<span class="hi">Found ' + found.length + ' .special elements:</span> ' +
+        found.map(function() { return '"' + $(this).text() + '"'; }).get().join(', '));
+      found.css({'background':'#fde68a','color':'#92400e'});
+    }
+  </script>
+</body>
+</html></textarea>
+
+<textarea id="code-jq-02" style="display:none"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>jQuery DOM Manipulation</title>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 560px; margin: 2rem auto; padding: 0 1.25rem; }
+    h1 { font-size: 1.3rem; color: #1e293b; }
+    h2 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin: 1.4rem 0 0.5rem; }
+    .demo { background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 1rem; margin-bottom: 0.25rem; }
+    button { padding: 0.38rem 0.85rem; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; margin: 0.2rem; }
+    .btn-blue { background: #4f9cf9; color: #fff; } .btn-blue:hover { background: #3d8ae8; }
+    .btn-purp { background: #a78bfa; color: #fff; } .btn-purp:hover { background: #8b5cf6; }
+    .btn-green { background: #34d399; color: #fff; } .btn-green:hover { background: #10b981; }
+    input.txt { padding: 0.4rem 0.7rem; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: 0.88rem; width: 200px; }
+    input.txt:focus { outline: none; border-color: #4f9cf9; }
+    #anim-box { width: 64px; height: 64px; background: #4f9cf9; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; }
+    .list-item { background: #fff; border: 1px solid #e2e8f0; border-radius: 7px; padding: 0.45rem 0.85rem; margin: 0.3rem 0; font-size: 0.88rem; display: flex; justify-content: space-between; align-items: center; }
+    .list-item .remove-btn { background: none; border: none; color: #f87171; font-size: 1.1rem; cursor: pointer; padding: 0 0.2rem; font-weight: 700; }
+    #val-result { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #475569; margin-top: 0.5rem; min-height: 1.3em; }
+  </style>
+</head>
+<body>
+  <h1>jQuery DOM Manipulation</h1>
+
+  <h2>.html() / .text() / .css()</h2>
+  <div class="demo">
+    <div id="edit-me" style="padding:0.5rem;background:#e0f2fe;border-radius:6px;min-height:2rem;font-size:0.9rem;color:#0369a1">Original content</div>
+    <br>
+    <button class="btn-blue"  onclick="$('#edit-me').text('Changed with .text() — HTML is escaped &lt;b&gt;safely&lt;/b&gt;')">.text()</button>
+    <button class="btn-purp"  onclick="$('#edit-me').html('Changed with <strong>.html()</strong> — tags <em>are rendered</em>')">.html()</button>
+    <button class="btn-green" onclick="$('#edit-me').css({background:'#d1fae5',color:'#065f46'})">.css()</button>
+    <button onclick="$('#edit-me').html('Original content').css({background:'#e0f2fe',color:'#0369a1'})" style="background:#e2e8f0;color:#475569">Reset</button>
+  </div>
+
+  <h2>.addClass() / .removeClass() / .toggleClass()</h2>
+  <div class="demo">
+    <div id="class-target" style="padding:0.75rem;border-radius:8px;background:#f1f5f9;font-size:0.88rem;transition:all 0.3s">Watching my classes change...</div>
+    <br>
+    <button class="btn-blue"  onclick="$('#class-target').addClass('highlight')">.addClass()</button>
+    <button class="btn-purp"  onclick="$('#class-target').removeClass('highlight')">.removeClass()</button>
+    <button class="btn-green" onclick="$('#class-target').toggleClass('highlight')">.toggleClass()</button>
+    <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.4rem" id="class-display">classes: (none)</div>
+    <style>.highlight { background:#fef9c3 !important; border-left:4px solid #f59e0b; padding-left:0.75rem !important; }</style>
+  </div>
+
+  <h2>.append() / .prepend() / .remove()</h2>
+  <div class="demo">
+    <div id="list-container">
+      <div class="list-item">Base item <button class="remove-btn">×</button></div>
+    </div>
+    <input class="txt" id="append-input" placeholder="New item text..." style="margin-top:0.6rem">
+    <br>
+    <button class="btn-blue"  onclick="appendItem()" style="margin-top:0.4rem">.append()</button>
+    <button class="btn-purp"  onclick="prependItem()">.prepend()</button>
+  </div>
+
+  <h2>.val() — read form values</h2>
+  <div class="demo">
+    <input class="txt" id="val-input" placeholder="Type here..." style="margin-right:0.5rem">
+    <button class="btn-blue" onclick="readVal()">Read .val()</button>
+    <div id="val-result">Value will appear here</div>
+  </div>
+
+  <script>
+    $(document).on('click', '.remove-btn', function() {
+      $(this).closest('.list-item').fadeOut(220, function() { $(this).remove(); });
+    });
+    $(document).on('click', '#class-target', function() {
+      var classes = $(this).attr('class') || '(none)';
+      $('#class-display').text('classes: ' + classes);
+    });
+    $('#class-target').click();
+
+    function appendItem() {
+      var val = $('#append-input').val().trim();
+      if (!val) return;
+      $('#list-container').append('<div class="list-item">' + val + ' <button class="remove-btn">×</button></div>');
+      $('#append-input').val('').focus();
+    }
+    function prependItem() {
+      var val = $('#append-input').val().trim();
+      if (!val) return;
+      $('#list-container').prepend('<div class="list-item" style="background:#ede9fe;border-color:#c4b5fd">' + val + ' <em style="font-size:0.72rem;color:#7c3aed">(prepended)</em> <button class="remove-btn">×</button></div>');
+      $('#append-input').val('').focus();
+    }
+    function readVal() {
+      var v = $('#val-input').val();
+      $('#val-result').text('→ .val() returned: "' + v + '" (length: ' + v.length + ')');
+    }
+  </script>
+</body>
+</html></textarea>
+
+<textarea id="code-jq-03" style="display:none"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>jQuery Events</title>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 560px; margin: 2rem auto; padding: 0 1.25rem; }
+    h1 { font-size: 1.3rem; color: #1e293b; }
+    h2 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin: 1.4rem 0 0.5rem; }
+    .demo { background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 1rem; margin-bottom: 0.25rem; }
+    button { padding: 0.4rem 0.9rem; border: none; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; margin: 0.2rem; transition: all 0.18s; }
+    .btn-blue  { background: #4f9cf9; color: #fff; }
+    .btn-purp  { background: #a78bfa; color: #fff; }
+    .btn-green { background: #34d399; color: #fff; }
+    .log { background: #0f172a; border-radius: 7px; padding: 0.55rem 0.85rem; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #94a3b8; margin-top: 0.6rem; min-height: 2em; max-height: 80px; overflow-y: auto; }
+    .log .hi { color: #34d399; }
+    #drag-box { width: 72px; height: 72px; border-radius: 10px; background: #4f9cf9; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer; user-select: none; transition: transform 0.2s; }
+    #drag-box:active { transform: scale(0.92); }
+    .key-display { background: #1e293b; color: #a78bfa; font-family: 'JetBrains Mono', monospace; border-radius: 6px; padding: 0.4rem 0.75rem; font-size: 0.85rem; margin-top: 0.5rem; min-height: 2em; }
+    .todo-list { list-style: none; padding: 0; }
+    .todo-list li { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.75rem; background: #fff; border-radius: 6px; margin: 0.3rem 0; border: 1px solid #e2e8f0; font-size: 0.88rem; }
+    .todo-list li.done { text-decoration: line-through; color: #94a3b8; background: #f8fafc; }
+    .todo-list li input[type=checkbox] { cursor: pointer; accent-color: #4f9cf9; }
+    input.txt { padding: 0.42rem 0.7rem; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: 0.88rem; width: 200px; font-family: inherit; }
+    input.txt:focus { outline: none; border-color: #4f9cf9; }
+  </style>
+</head>
+<body>
+  <h1>jQuery Events</h1>
+
+  <h2>1. .on() — click &amp; dblclick</h2>
+  <div class="demo">
+    <div id="drag-box">Click me</div>
+    <div class="log" id="click-log">Waiting...</div>
+  </div>
+
+  <h2>2. Keyboard events — .on('keydown')</h2>
+  <div class="demo">
+    <input class="txt" id="key-in" placeholder="Type here — watch below">
+    <div class="key-display" id="key-display">Press a key...</div>
+  </div>
+
+  <h2>3. .on() with namespace — unbind a specific handler</h2>
+  <div class="demo">
+    <button class="btn-blue"  id="ns-btn">Click me (both handlers active)</button>
+    <button class="btn-purp"  onclick="removeHandler()">Remove .myns handler</button>
+    <div class="log" id="ns-log">Click the blue button</div>
+  </div>
+
+  <h2>4. Event delegation on a live list</h2>
+  <div class="demo">
+    <div style="display:flex;gap:0.5rem;margin-bottom:0.6rem">
+      <input class="txt" id="todo-in" placeholder="New task...">
+      <button class="btn-green" onclick="addTodo()">Add</button>
+    </div>
+    <ul class="todo-list" id="todo-list">
+      <li><input type="checkbox"> Learn jQuery</li>
+      <li><input type="checkbox"> Build something cool</li>
+    </ul>
+    <div class="log" id="todo-log">Check a task or add a new one</div>
+  </div>
+
+  <script>
+    /* 1. click / dblclick */
+    var clicks = 0;
+    $('#drag-box')
+      .on('click', function() {
+        clicks++;
+        $('#click-log').html('<span class="hi">click</span> #' + clicks + ' — single click detected');
+        $(this).css('background', clicks % 2 ? '#a78bfa' : '#4f9cf9');
+      })
+      .on('dblclick', function() {
+        $('#click-log').html('<span class="hi">dblclick</span> — double click! Resetting counter.');
+        clicks = 0; $(this).css('background','#34d399');
+      });
+
+    /* 2. keyboard */
+    $('#key-in').on('keydown', function(e) {
+      $('#key-display').html(
+        'key: <strong style="color:#e2e8f0">' + e.key + '</strong>' +
+        ' &nbsp;|&nbsp; keyCode: <strong style="color:#fbbf24">' + e.keyCode + '</strong>' +
+        ' &nbsp;|&nbsp; shift: <strong>' + e.shiftKey + '</strong>' +
+        ' &nbsp;|&nbsp; ctrl: <strong>' + e.ctrlKey + '</strong>'
+      );
+    });
+
+    /* 3. namespace */
+    $('#ns-btn')
+      .on('click.default', function() {
+        $('#ns-log').html('<span class="hi">.default</span> handler still active');
+      })
+      .on('click.myns', function() {
+        $('#ns-log').html(
+          ($('#ns-log').html() || '') + '<br><span style="color:#a78bfa">.myns</span> handler fired too'
+        );
+      });
+    function removeHandler() {
+      $('#ns-btn').off('click.myns');
+      $('#ns-log').html('Removed <span style="color:#a78bfa">.myns</span> handler — only .default remains');
+    }
+
+    /* 4. delegation */
+    $('#todo-list').on('change', 'input[type=checkbox]', function() {
+      var $li = $(this).closest('li');
+      $li.toggleClass('done', this.checked);
+      $('#todo-log').html('<span class="hi">' + (this.checked ? 'Completed' : 'Uncompleted') + ':</span> ' + $li.text().trim());
+    });
+    function addTodo() {
+      var val = $('#todo-in').val().trim();
+      if (!val) return;
+      $('#todo-list').append('<li><input type="checkbox"> ' + val + '</li>');
+      $('#todo-in').val('').focus();
+      $('#todo-log').html('<span class="hi">Added:</span> "' + val + '" — delegation handles it automatically!');
+    }
+  </script>
+</body>
+</html></textarea>
+
+<textarea id="code-jq-04" style="display:none"><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>jQuery AJAX</title>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 560px; margin: 2rem auto; padding: 0 1.25rem; background: #0f172a; color: #e2e8f0; }
+    h1 { font-size: 1.3rem; color: #4f9cf9; }
+    h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin: 1.5rem 0 0.6rem; }
+    button { background: #4f9cf9; color: #fff; border: none; padding: 0.48rem 1rem; border-radius: 7px; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-right: 0.4rem; }
+    button:hover { background: #3d8ae8; } button:disabled { opacity: 0.45; cursor: default; }
+    .btn-purp { background: #a78bfa; } .btn-purp:hover { background: #8b5cf6; }
+    .card { background: #1e293b; border-radius: 10px; padding: 0.9rem 1rem; margin-top: 0.6rem; border: 1px solid rgba(255,255,255,0.05); }
+    .card-title { font-size: 0.9rem; font-weight: 700; color: #e2e8f0; margin-bottom: 0.3rem; }
+    .card-meta  { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: #4f9cf9; margin-bottom: 0.3rem; }
+    .card-body  { font-size: 0.82rem; color: #94a3b8; line-height: 1.6; }
+    .spinner { display: inline-block; width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(79,156,249,0.2); border-top-color: #4f9cf9; animation: spin 0.75s linear infinite; vertical-align: middle; margin-left: 0.5rem; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .error { background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.25); border-radius: 8px; padding: 0.75rem 1rem; color: #f87171; font-size: 0.85rem; margin-top: 0.6rem; }
+    .photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 0.6rem; }
+    .photo-grid img { width: 100%; aspect-ratio: 1; border-radius: 6px; object-fit: cover; }
+    select { background: #1e293b; color: #e2e8f0; border: 1.5px solid #334155; padding: 0.38rem 0.6rem; border-radius: 6px; font-size: 0.82rem; margin-right: 0.4rem; }
+    .status-bar { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: #475569; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>jQuery AJAX</h1>
+
+  <h2>1. $.ajax() — full control</h2>
+  <select id="post-sel">
+    <option value="1">Post 1</option><option value="3">Post 3</option>
+    <option value="7">Post 7</option><option value="10">Post 10</option>
+  </select>
+  <button id="ajax-btn" onclick="ajaxPost()">$.ajax() GET</button>
+  <div class="status-bar" id="ajax-status"></div>
+  <div id="ajax-result"></div>
+
+  <h2>2. $.get() — shorthand GET</h2>
+  <button onclick="getComments()">$.get() Comments</button>
+  <div id="get-result"></div>
+
+  <h2>3. $.post() — sending data</h2>
+  <p style="font-size:0.8rem;color:#475569;margin-bottom:0.5rem">JSONPlaceholder echoes POSTed data back — nothing is truly saved.</p>
+  <button class="btn-purp" onclick="postData()">$.post() with data</button>
+  <div id="post-result"></div>
+
+  <h2>4. Photo gallery — $.get() images</h2>
+  <button onclick="loadPhotos()">Load Photos</button>
+  <div id="photo-result"></div>
+
+  <script>
+    /* 1. $.ajax */
+    function ajaxPost() {
+      var id = $('#post-sel').val();
+      var $btn = $('#ajax-btn').prop('disabled', true);
+      $('#ajax-status').html('Requesting... <span class="spinner"></span>');
+      $('#ajax-result').html('');
+      $.ajax({
+        url: 'https://jsonplaceholder.typicode.com/posts/' + id,
+        method: 'GET',
+        dataType: 'json',
+        success: function(data) {
+          $('#ajax-result').html(
+            '<div class="card"><div class="card-meta">POST #' + data.id + ' · userId: ' + data.userId + '</div>' +
+            '<div class="card-title">' + data.title + '</div>' +
+            '<div class="card-body">' + data.body + '</div></div>'
+          );
+          $('#ajax-status').html('<span style="color:#34d399">✓ 200 OK — JSON parsed successfully</span>');
+        },
+        error: function(xhr) {
+          $('#ajax-result').html('<div class="error">Error: HTTP ' + xhr.status + '</div>');
+          $('#ajax-status').text('Request failed');
+        },
+        complete: function() { $btn.prop('disabled', false); }
+      });
+    }
+
+    /* 2. $.get */
+    function getComments() {
+      $('#get-result').html('<span class="spinner"></span>');
+      $.get('https://jsonplaceholder.typicode.com/comments?postId=1&_limit=3', function(data) {
+        var html = data.map(function(c) {
+          return '<div class="card"><div class="card-meta">' + c.email + '</div>' +
+                 '<div class="card-body">' + c.body.substring(0, 90) + '...</div></div>';
+        }).join('');
+        $('#get-result').html(html);
+      }).fail(function() { $('#get-result').html('<div class="error">Request failed</div>'); });
+    }
+
+    /* 3. $.post */
+    function postData() {
+      $('#post-result').html('<span class="spinner"></span>');
+      $.post('https://jsonplaceholder.typicode.com/posts', {
+        title: 'My New Post',
+        body: 'This is the post body.',
+        userId: 1
+      }, function(data) {
+        $('#post-result').html(
+          '<div class="card"><div class="card-meta">Created — ID: <strong style="color:#34d399">' + data.id + '</strong></div>' +
+          '<div class="card-body">Server echoed: title="' + data.title + '"</div></div>'
+        );
+      }).fail(function() { $('#post-result').html('<div class="error">Request failed</div>'); });
+    }
+
+    /* 4. Photos */
+    function loadPhotos() {
+      $('#photo-result').html('<span class="spinner"></span>');
+      $.get('https://jsonplaceholder.typicode.com/photos?_limit=8', function(data) {
+        var html = '<div class="photo-grid">' +
+          data.map(function(p) {
+            return '<img src="' + p.thumbnailUrl + '" alt="' + p.title + '" loading="lazy">';
+          }).join('') + '</div>';
+        $('#photo-result').html(html);
+      });
+    }
+  </script>
+</body>
+</html></textarea>
+
+<!-- Mobile header -->
+<header class="mobile-header">
+  <span class="mobile-brand">⚡ Dev Playground</span>
+</header>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">Dan Peltier</div>
+  <div class="sidebar-url">danpeltier.ca</div>
+
+  <div class="nav-section-label">Pages</div>
+  <ul class="nav-list">
+    <li><a href="/api/home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Homepage
+    </a></li>
+    <li><a href="/api/resume">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Resume
+    </a></li>
+    <li><a href="/api/portfolio">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Portfolio
+    </a></li>
+    <li><a href="/api/playground" class="active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>Playground
+    </a></li>
+  </ul>
+
+  <div class="nav-section-label" style="margin-top:1.5rem">About</div>
+  <div style="font-size:0.75rem;color:var(--text-faint);line-height:1.65;padding:0 0.1rem">
+    18 interactive tutorials covering HTML, CSS, JavaScript &amp; jQuery. Click a file to preview it, or click &lt;/&gt; to open the code editor.
+  </div>
+
+  <div class="sidebar-bottom">
+    <a href="/api/home" class="sidebar-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      Back to Home
+    </a>
+  </div>
+</aside>
+
+<!-- Dock (file explorer) -->
+<div class="dock" id="dock">
+  <div class="dock-header">
+    <span class="dock-title">Explorer</span>
+    <button class="dock-toggle" id="dock-toggle" title="Toggle Explorer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+  </div>
+  <div class="dock-tree" id="dock-tree"></div>
+</div>
+
+<!-- Main playground area -->
+<div class="playground-main" id="playground-main">
+
+  <!-- Welcome state -->
+  <div class="welcome-state" id="welcome-state">
+    <div class="welcome-icon">⚡</div>
+    <h1 class="welcome-title">Developer's Playground</h1>
+    <p class="welcome-sub">18 interactive tutorials covering HTML, CSS, JavaScript, and jQuery. Click any file to preview it live — or click the <code style="font-size:0.8em;opacity:0.8">&lt;/&gt;</code> icon to open and edit the code.</p>
+    <div class="welcome-cards" id="welcome-cards"></div>
+  </div>
+
+  <!-- Tutorial area (shown after file selected) -->
+  <div class="tutorial-area" id="tutorial-area">
+    <div class="preview-toolbar">
+      <span class="tut-label" id="tut-lang-badge" style="margin-right:0.5rem"></span>
+      <span class="tut-title" id="tut-title"></span>
+      <span class="tut-sep">·</span>
+      <div class="concepts" id="tut-concepts"></div>
+      <div class="toolbar-actions">
+        <button class="tb-btn" id="mode-toggle-btn" onclick="togglePreviewMode()">🌙 Dark preview</button>
+        <button class="tb-btn accent" onclick="openCurrentEditor()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          Open Editor
+        </button>
+      </div>
+    </div>
+    <div class="preview-wrap">
+      <iframe class="preview-iframe" id="preview-frame" title="Code Preview" sandbox="allow-scripts allow-forms allow-modals"></iframe>
+    </div>
+  </div>
+
+</div>
+
+<!-- Editor windows layer -->
+<div id="windows-layer"></div>
+
+<!-- ─── Mobile Shell ─────────────────────────────────────────────── -->
+<div id="mob-shell">
+  <!-- Top bar -->
+  <div id="mob-topbar">
+    <span id="mob-title">⚡ Dev Playground</span>
+    <button id="mob-dark-btn">🌙 Dark</button>
+  </div>
+
+  <!-- Panel area -->
+  <div id="mob-panels">
+
+    <!-- Files tab -->
+    <div class="mob-panel active" id="mob-panel-files">
+      <div class="dock-tree" id="mob-tree"></div>
+    </div>
+
+    <!-- Code tab -->
+    <div class="mob-panel" id="mob-panel-code">
+      <div id="mob-no-file">
+        <div id="mob-nf-icon">⚡</div>
+        <p>Pick a file from the <strong>Files</strong> tab to view its code here.</p>
+      </div>
+      <div id="mob-editor">
+        <div id="mob-code-toolbar">
+          <button class="mob-tb-btn mob-view-btn active">👁 View</button>
+          <button class="mob-tb-btn mob-edit-btn">✎ Edit</button>
+          <div class="mob-tb-sep"></div>
+          <button class="mob-tb-btn mob-run-btn">▶ Run</button>
+          <button class="mob-tb-btn mob-copy-btn">📋 Copy</button>
+        </div>
+        <div id="mob-code-view"><pre><code id="mob-code-hl" class="language-markup"></code></pre></div>
+        <textarea id="mob-code-edit" spellcheck="false" autocorrect="off" autocapitalize="off"></textarea>
+      </div>
+    </div>
+
+    <!-- Preview tab -->
+    <div class="mob-panel" id="mob-panel-preview">
+      <div id="mob-preview-empty">
+        <div class="mob-pe-icon">▶</div>
+        <p>Press <strong>▶ Run</strong> on the Code tab to see the live preview.</p>
+      </div>
+      <iframe id="mob-preview-frame" title="Mobile Preview"
+        sandbox="allow-scripts allow-forms allow-modals"></iframe>
+    </div>
+
+  </div><!-- /mob-panels -->
+
+  <!-- Bottom tab bar -->
+  <nav id="mob-tabbar">
+    <button class="mob-tab active" data-tab="files">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+      </svg>
+      <span>Files</span>
+    </button>
+    <button class="mob-tab" data-tab="code">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+      </svg>
+      <span>Code</span>
+    </button>
+    <button class="mob-tab" data-tab="preview">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      <span>Preview</span>
+    </button>
+  </nav>
+</div><!-- /mob-shell -->
+
+<!-- Prism.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+
+<script>
+$(function () {
+
+  // ── Tutorial metadata ────────────────────────────────────────────
+  var TUTORIALS = [
+    {
+      id: 'html', label: 'HTML', icon: '🟠',
+      color: '#e34c26', badgeStyle: 'background:rgba(227,76,38,0.14);color:#e34c26',
+      files: [
+        { id: 'html-01', name: '01 · Basics',           desc: 'Headings, paragraphs, emphasis, links, and blockquotes — the building blocks of every web page.',         concepts: ['DOCTYPE','Headings','<p>','<strong>','<em>','<a>','<blockquote>'] },
+        { id: 'html-02', name: '02 · Lists & Tables',   desc: 'Unordered, ordered, and definition lists plus data tables with thead/tbody — essential for structured data.', concepts: ['<ul>/<ol>','<li>','<dl>','<table>','<thead>','<tbody>','<th>/<td>'] },
+        { id: 'html-03', name: '03 · Forms',            desc: 'All major input types, labels, select, range sliders, and form submission handling with JavaScript.',         concepts: ['<form>','<input>','<select>','<textarea>','type=range','required','onsubmit'] },
+        { id: 'html-04', name: '04 · Semantic HTML',    desc: 'Meaningful structural tags that improve accessibility, SEO, and document clarity over generic divs.',         concepts: ['<header>','<nav>','<main>','<article>','<section>','<aside>','<footer>'] },
+      ]
+    },
+    {
+      id: 'css', label: 'CSS', icon: '🔵',
+      color: '#2965f1', badgeStyle: 'background:rgba(41,101,241,0.14);color:#60a5fa',
+      files: [
+        { id: 'css-01', name: '01 · Selectors',   desc: 'Element, class, ID, pseudo-class, pseudo-element, combinator, and attribute selectors — with live demos.',            concepts: ['.class','#id',':hover','::before',':nth-child','[attr]','combinator'] },
+        { id: 'css-02', name: '02 · Box Model',   desc: 'Margin, border, padding, content, box-sizing — the fundamental layout concept behind every element.',               concepts: ['margin','border','padding','box-sizing','width','height','box-shadow'] },
+        { id: 'css-03', name: '03 · Flexbox',     desc: 'One-dimensional layout using justify-content, align-items, gap, and flex-direction — with interactive controls.',    concepts: ['display:flex','justify-content','align-items','gap','flex-wrap','flex-direction'] },
+        { id: 'css-04', name: '04 · Grid',        desc: 'Two-dimensional layout with grid-template-columns, auto-fit, named areas, and live column controls.',               concepts: ['display:grid','grid-template-columns','repeat()','auto-fit','grid-area','gap'] },
+        { id: 'css-05', name: '05 · Animations',  dark: true, desc: 'CSS transitions, @keyframes animations, transforms, spinners, bounce, slide-in, and gradient text.',               concepts: ['transition','@keyframes','animation','transform','scale','rotate','translateX'] },
+      ]
+    },
+    {
+      id: 'js', label: 'JavaScript', icon: '🟡',
+      color: '#f7df1e', badgeStyle: 'background:rgba(247,223,30,0.12);color:#fbbf24',
+      files: [
+        { id: 'js-01', name: '01 · Variables & Types', dark: true, desc: 'let, const, var, data types, template literals, typeof, and type coercion — the foundation of JS.',        concepts: ['let','const','var','typeof','template literals','type coercion','undefined'] },
+        { id: 'js-02', name: '02 · Functions',         dark: true, desc: 'Function declarations, arrow functions, default parameters, closures, and higher-order functions.',         concepts: ['function','arrow fn','default params','closures','HOF','filter/map','return'] },
+        { id: 'js-03', name: '03 · DOM',               desc: 'querySelector, innerHTML, createElement, appendChild, classList, and live DOM manipulation.',               concepts: ['querySelector','innerHTML','createElement','appendChild','classList','textContent'] },
+        { id: 'js-04', name: '04 · Events',            desc: 'addEventListener for click, input, keyboard, and event delegation on dynamic elements.',                    concepts: ['addEventListener','click','input','keydown','delegation','e.target','bubbling'] },
+        { id: 'js-05', name: '05 · Fetch API',         dark: true, desc: 'async/await, Promise .then()/.catch(), error handling, and live data from JSONPlaceholder.',                concepts: ['fetch','async/await','Promise','.then()','try/catch','JSON','error handling'] },
+      ]
+    },
+    {
+      id: 'jq', label: 'jQuery', icon: '🔷',
+      color: '#0769ad', badgeStyle: 'background:rgba(7,105,173,0.16);color:#38bdf8',
+      files: [
+        { id: 'jq-01', name: '01 · Selectors',      desc: '$() selectors, .find(), .filter(), :first/:last/:odd/:even, and comparison with vanilla JS.',     concepts: ['$()','#id','.class','.find()','.filter()',':eq()',':odd/:even'] },
+        { id: 'jq-02', name: '02 · Manipulation',   desc: '.html(), .text(), .css(), .addClass(), .toggleClass(), .append(), .prepend(), .val().',           concepts: ['.html()','.text()','.css()','.addClass()','.toggleClass()','.append()','.val()'] },
+        { id: 'jq-03', name: '03 · Events',         desc: '.on(), event namespaces, .off(), keyboard events, and delegation on dynamically added elements.',  concepts: ['.on()','.off()','namespaces','keydown','delegation','.trigger()','.closest()'] },
+        { id: 'jq-04', name: '04 · AJAX',           dark: true, desc: '$.ajax(), $.get(), $.post() — full examples loading real JSON from JSONPlaceholder.',             concepts: ['$.ajax()','$.get()','$.post()','dataType','success','error','complete'] },
+      ]
+    },
+  ];
+
+  var currentFile = null;
+  var openWindows  = {};  // id → $element
+  var winZBase     = 500;
+  var winZTop      = winZBase;
+  var winStack     = 0;
+  var previewDark  = localStorage.getItem('pg-dark') === '1';
+
+  // ── Build dock tree ─────────────────────────────────────────────
+  function buildDock() {
+    var $tree = $('#dock-tree');
+    $tree.empty();
+    TUTORIALS.forEach(function (section) {
+      var $folder = $('<div class="folder-row open" data-id="' + section.id + '">');
+      $folder.html(
+        '<svg class="folder-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>' +
+        '<span class="folder-icon">' + section.icon + '</span>' +
+        '<span class="folder-label">' + section.label + '</span>' +
+        '<span class="folder-badge" style="' + section.badgeStyle + '">' + section.files.length + '</span>'
+      );
+      var $fileList = $('<div class="file-list" data-parent="' + section.id + '">');
+      section.files.forEach(function (file) {
+        var $file = $('<div class="file-row" data-file-id="' + file.id + '">');
+        $file.html(
+          '<div class="file-dot" style="background:' + section.color + '"></div>' +
+          '<span class="file-name">' + file.name + '</span>' +
+          '<span class="file-code-btn" data-file-id="' + file.id + '" title="Open code editor">&lt;/&gt;</span>'
+        );
+        $fileList.append($file);
+      });
+      $tree.append($folder);
+      $tree.append($fileList);
+    });
+  }
+
+  // ── Build welcome cards ─────────────────────────────────────────
+  function buildWelcomeCards() {
+    var $wc = $('#welcome-cards');
+    TUTORIALS.forEach(function (s) {
+      var $card = $('<div class="welcome-card" data-section="' + s.id + '">');
+      $card.html(
+        '<div class="welcome-card-icon">' + s.icon + '</div>' +
+        '<div class="welcome-card-lang" style="color:' + s.color + '">' + s.label + '</div>' +
+        '<div class="welcome-card-count">' + s.files.length + ' tutorials</div>'
+      );
+      $wc.append($card);
+    });
+  }
+
+  // ── Read tutorial code (supports both <script type=text/plain> and <textarea>) ──
+  function getTutorialCode(fileId) {
+    var el = document.querySelector('#code-' + fileId);
+    if (!el) return '';
+    return (el.tagName === 'TEXTAREA' ? el.value : el.textContent).trim();
+  }
+
+  // ── Determine whether the invert filter should be on for a file ──
+  // Dark-native tutorials: invert when LIGHT mode (to look light)
+  // Light-native tutorials: invert when DARK mode (to look dark)
+  function shouldInvert(fileId) {
+    var res = resolveFile(fileId);
+    var nativeDark = res && res.file.dark;
+    return nativeDark ? !previewDark : previewDark;
+  }
+
+  // ── Resolve file + section from id ──────────────────────────────
+  function resolveFile(fileId) {
+    var file = null, section = null;
+    TUTORIALS.forEach(function (s) {
+      s.files.forEach(function (f) {
+        if (f.id === fileId) { file = f; section = s; }
+      });
+    });
+    return file ? { file: file, section: section } : null;
+  }
+
+  // ── Preview only (no editor window) ─────────────────────────────
+  function previewFile(fileId) {
+    var res = resolveFile(fileId);
+    if (!res) return;
+    var file = res.file, section = res.section;
+
+    currentFile = res;
+
+    // Update dock active state
+    $('.file-row').removeClass('active');
+    $('[data-file-id="' + fileId + '"]').addClass('active');
+
+    // Show tutorial area
+    $('#welcome-state').hide();
+    $('#tutorial-area').addClass('visible');
+
+    // Update toolbar
+    $('#tut-lang-badge').html('<span style="' + section.badgeStyle + ';padding:0.15rem 0.5rem;border-radius:4px;font-size:0.65rem;font-weight:700">' + section.label + '</span>');
+    $('#tut-title').text(file.name);
+    var $conc = $('#tut-concepts').empty();
+    file.concepts.forEach(function (c) { $conc.append('<span class="concept-tag">' + c + '</span>'); });
+
+    // Run preview
+    $('#preview-frame')[0].srcdoc = getTutorialCode(fileId);
+    $('#preview-frame').toggleClass('dark-mode', shouldInvert(fileId));
+  }
+
+  // ── Open / focus editor window ───────────────────────────────────
+  function editFile(fileId) {
+    var res = resolveFile(fileId);
+    if (!res) return;
+    // Ensure preview is loaded for context
+    if (!currentFile || currentFile.file.id !== fileId) previewFile(fileId);
+    var code = getTutorialCode(fileId);
+    if (openWindows[fileId]) {
+      focusWindow(openWindows[fileId]);
+    } else {
+      createEditorWindow(fileId, res.file, res.section, code);
+    }
+  }
+
+  // ── Open file (preview + editor) — used by welcome cards ────────
+  function openFile(fileId) {
+    previewFile(fileId);
+    editFile(fileId);
+  }
+
+  // ── Apply / remove soft-wrap for a window ───────────────────────
+  function applyWrap($win, wrap) {
+    $win.toggleClass('wrap-mode', wrap);
+  }
+
+  // ── Create draggable editor window ──────────────────────────────
+  function createEditorWindow(fileId, file, section, code) {
+    var winW = 680, winH = 490;
+    var mainLeft  = parseInt(getComputedStyle($('#playground-main')[0]).left);
+    var mainWidth = window.innerWidth - mainLeft;
+    var sx = Math.max(mainLeft + 20, mainLeft + (mainWidth - winW) / 2 + winStack * 26);
+    var sy = Math.max(10, (window.innerHeight - winH) / 2 + winStack * 26);
+    winStack = (winStack + 1) % 6;
+    winZTop++;
+
+    var lang = fileId.startsWith('html') ? 'markup' : fileId.startsWith('css') ? 'css' : 'javascript';
+    var lineCount = code.split('\n').length;
+
+    var $win = $('<div class="editor-win" id="win-' + fileId + '">');
+    $win.css({ left: sx, top: sy, width: winW, height: winH, zIndex: winZTop });
+
+    $win.html(
+      '<div class="win-titlebar">' +
+        '<div class="win-dot" style="background:' + section.color + ';opacity:0.85"></div>' +
+        '<span class="win-filename">' + file.name + '</span>' +
+        '<span class="win-lang-badge" style="' + section.badgeStyle + '">' + section.label + '</span>' +
+        '<div class="win-controls">' +
+          '<button class="win-btn minimize" title="Minimize">–</button>' +
+          '<button class="win-btn close" title="Close">✕</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="win-toolbar">' +
+        '<button class="win-tb-btn view-btn active" data-mode="view">👁 View</button>' +
+        '<button class="win-tb-btn edit-btn" data-mode="edit">✎ Edit</button>' +
+        '<div class="win-tb-sep"></div>' +
+        '<button class="win-tb-btn run-btn run">▶ Run</button>' +
+        '<button class="win-tb-btn copy-btn">📋 Copy</button>' +
+        '<div class="win-tb-sep"></div>' +
+        '<button class="win-tb-btn wrap-btn" title="Toggle soft wrap">⇥ Wrap</button>' +
+      '</div>' +
+      '<div class="win-body">' +
+        '<div class="code-view"><pre><code class="language-' + lang + '"></code></pre></div>' +
+        '<textarea class="code-edit" spellcheck="false"></textarea>' +
+      '</div>' +
+      '<div class="win-status">' +
+        '<span id="ws-lines-' + fileId + '">' + lineCount + ' lines</span>' +
+        '<span>' + section.label + ' · ' + file.name + '</span>' +
+      '</div>'
+    );
+
+    $('#windows-layer').append($win);
+    openWindows[fileId] = $win;
+
+    // Set code
+    $win.find('.code-edit').val(code);
+    $win.find('code').text(code);
+    Prism.highlightElement($win.find('code')[0]);
+
+    // Focus on click
+    $win.on('mousedown', function () { focusWindow($win); });
+
+    // ── jQuery UI: Drag by title bar ────────────────────────────────
+    $win.draggable({
+      handle: '.win-titlebar',
+      cancel: '.win-btn',
+      cursor: 'grabbing',
+      opacity: 0.92,
+      scroll: false,
+      start: function (e, ui) {
+        focusWindow($win);
+        // Fix for position:fixed + jQuery UI — subtract scroll offset
+        ui.position.left -= $(window).scrollLeft();
+        ui.position.top  -= $(window).scrollTop();
+      },
+      drag: function (e, ui) {
+        // Keep window fully on-screen
+        ui.position.left = Math.max(0, Math.min(ui.position.left, window.innerWidth  - $win.outerWidth()));
+        ui.position.top  = Math.max(0, Math.min(ui.position.top,  window.innerHeight - 42));
+      }
+    });
+
+    // ── jQuery UI: Resize from SE corner ────────────────────────────
+    $win.resizable({
+      handles: 'se',
+      minWidth:  380,
+      minHeight: 220,
+      start: function () { focusWindow($win); }
+    });
+
+    // Minimize
+    $win.find('.minimize').on('click', function () { $win.toggleClass('minimized'); });
+
+    // Close
+    $win.find('.close').on('click', function () {
+      $win.remove();
+      delete openWindows[fileId];
+      $('[data-file-id="' + fileId + '"]').removeClass('active');
+    });
+
+    // View/Edit toggle
+    $win.find('.view-btn').on('click', function () {
+      $win.find('.code-view').show();
+      $win.find('.code-edit').hide();
+      $win.find('.view-btn').addClass('active');
+      $win.find('.edit-btn').removeClass('active');
+    });
+    $win.find('.edit-btn').on('click', function () {
+      $win.find('.code-view').hide();
+      $win.find('.code-edit').show().focus();
+      $win.find('.edit-btn').addClass('active');
+      $win.find('.view-btn').removeClass('active');
+    });
+
+    // Run
+    $win.find('.run-btn').on('click', function () {
+      var isEdit = $win.find('.edit-btn').hasClass('active');
+      var code = isEdit ? $win.find('.code-edit').val() : $win.find('code').text();
+      // Re-highlight if switching back to view from edited code
+      if (isEdit) {
+        $win.find('code').text(code);
+        Prism.highlightElement($win.find('code')[0]);
+      }
+      $('#preview-frame')[0].srcdoc = code;
+      $('#preview-frame').toggleClass('dark-mode', shouldInvert(fileId));
+      // Show tutorial area if hidden
+      $('#welcome-state').hide();
+      $('#tutorial-area').addClass('visible');
+    });
+
+    // Tab key in textarea
+    $win.find('.code-edit').on('keydown', function (e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        var s = this.selectionStart, en = this.selectionEnd;
+        this.value = this.value.substring(0, s) + '  ' + this.value.substring(en);
+        this.selectionStart = this.selectionEnd = s + 2;
+        updateLineCount($win, fileId);
+      }
+    }).on('input', function () { updateLineCount($win, fileId); });
+
+    // Copy
+    $win.find('.copy-btn').on('click', function () {
+      var code = $win.find('.code-edit').hasClass('active') ? $win.find('.code-edit').val() : $win.find('code').text();
+      navigator.clipboard.writeText(code).then(function () {
+        $win.find('.copy-btn').addClass('copy-flash').text('✓ Copied!');
+        setTimeout(function () { $win.find('.copy-btn').removeClass('copy-flash').text('📋 Copy'); }, 1800);
+      });
+    });
+
+    // Wrap toggle — state is per-window, stored on the element
+    $win.data('wrap', false);
+    $win.find('.wrap-btn').on('click', function () {
+      var wrap = !$win.data('wrap');
+      $win.data('wrap', wrap);
+      $(this).toggleClass('active', wrap);
+      applyWrap($win, wrap);
+    });
+  }
+
+  function focusWindow($win) {
+    winZTop++;
+    $win.css('zIndex', winZTop);
+  }
+
+  function updateLineCount($win, fileId) {
+    var lines = $win.find('.code-edit').val().split('\n').length;
+    $('#ws-lines-' + fileId).text(lines + ' lines');
+  }
+
+  // ── Dock toggle ──────────────────────────────────────────────────
+  var dockOpen = true;
+  $('#dock-toggle').on('click', function () {
+    dockOpen = !dockOpen;
+    $('#dock').toggleClass('collapsed', !dockOpen);
+    $('#playground-main').toggleClass('dock-collapsed', !dockOpen);
+  });
+
+  // ── Folder expand/collapse ───────────────────────────────────────
+  $(document).on('click', '.folder-row', function () {
+    var id = $(this).data('id');
+    $(this).toggleClass('open');
+    var isOpen = $(this).hasClass('open');
+    $('[data-parent="' + id + '"]').slideToggle(160);
+  });
+
+  // ── File row click → preview only ───────────────────────────────
+  $(document).on('click', '.file-row', function (e) {
+    if ($(e.target).closest('.file-code-btn').length) return; // handled separately
+    previewFile($(this).data('file-id'));
+  });
+
+  // ── Code icon click → open editor ───────────────────────────────
+  $(document).on('click', '.file-code-btn', function (e) {
+    e.stopPropagation();
+    editFile($(this).data('file-id'));
+  });
+
+  // ── Welcome card click — open first file of section ─────────────
+  $(document).on('click', '.welcome-card', function () {
+    var sid = $(this).data('section');
+    var section = TUTORIALS.find(function (s) { return s.id === sid; });
+    if (section) {
+      // Open dock if collapsed
+      if (!dockOpen) { dockOpen = true; $('#dock').removeClass('collapsed'); $('#playground-main').removeClass('dock-collapsed'); }
+      // Expand folder
+      var $folder = $('[data-id="' + sid + '"]');
+      if (!$folder.hasClass('open')) { $folder.addClass('open'); $('[data-parent="' + sid + '"]').show(); }
+      openFile(section.files[0].id);
+    }
+  });
+
+  // ── Open editor for current file (toolbar button) ────────────────
+  window.openCurrentEditor = function () {
+    if (currentFile) editFile(currentFile.file.id);
+  };
+
+  // ── Apply dark preference to both iframes + both buttons ─────────
+  function applyDarkPref() {
+    $('#mode-toggle-btn').text(previewDark ? '☀️ Light preview' : '🌙 Dark preview');
+    $('#mob-dark-btn').text(previewDark ? '☀️ Light' : '🌙 Dark');
+    localStorage.setItem('pg-dark', previewDark ? '1' : '0');
+    // Per-file invert logic — dark-native tutorials flip the filter
+    var inv = currentFile ? shouldInvert(currentFile.file.id) : previewDark;
+    $('#preview-frame').toggleClass('dark-mode', inv);
+    $('#mob-preview-frame').toggleClass('dark-mode', inv);
+  }
+
+  // ── Preview mode toggle (desktop toolbar) ────────────────────────
+  window.togglePreviewMode = function () {
+    previewDark = !previewDark;
+    applyDarkPref();
+  };
+
+  // ── Mobile support ───────────────────────────────────────────────
+  var mobMode     = 'view';  // 'view' | 'edit'
+  var mobCode     = '';
+  var mobLang     = 'markup';
+  var mobFileId   = '';
+
+  function mobSwitchTab(tab) {
+    $('.mob-tab').removeClass('active');
+    $('.mob-tab[data-tab="' + tab + '"]').addClass('active');
+    $('.mob-panel').removeClass('active');
+    $('#mob-panel-' + tab).addClass('active');
+  }
+
+  function mobOpenFile(fileId, file, section, code) {
+    mobFileId = fileId;
+    mobCode = code;
+    mobLang = fileId.startsWith('html') ? 'markup' : fileId.startsWith('css') ? 'css' : 'javascript';
+    mobMode = 'view';
+
+    // Top bar title
+    $('#mob-title').text(section.label + ' · ' + file.name);
+
+    // Syntax-highlighted view
+    var $hl = $('#mob-code-hl');
+    $hl.removeClass().addClass('language-' + mobLang);
+    $hl.text(code);
+    Prism.highlightElement($hl[0]);
+
+    // Edit textarea
+    $('#mob-code-edit').val(code);
+
+    // Reset to view mode
+    $('#mob-code-view').show();
+    $('#mob-code-edit').hide();
+    $('.mob-view-btn').addClass('active');
+    $('.mob-edit-btn').removeClass('active');
+
+    // Show editor, hide placeholder
+    $('#mob-no-file').hide();
+    $('#mob-editor').css('display', 'flex');
+
+    // Switch tab first, then defer srcdoc assignment so the browser
+    // finishes repainting the visible panel before loading new content.
+    mobSwitchTab('preview');
+    $('#mob-preview-empty').hide();
+    var $frame = $('#mob-preview-frame');
+    $frame.show().toggleClass('dark-mode', shouldInvert(mobFileId));
+    var _code = code;
+    setTimeout(function () { $frame[0].srcdoc = _code; }, 30);
+  }
+
+  // Tab bar clicks
+  $('#mob-tabbar').on('click', '.mob-tab', function () {
+    mobSwitchTab($(this).data('tab'));
+  });
+
+  // View / Edit toggle
+  $('#mob-code-toolbar').on('click', '.mob-view-btn', function () {
+    if (mobMode === 'view') return;
+    mobMode = 'view';
+    mobCode = $('#mob-code-edit').val(); // persist edits
+    var $hl = $('#mob-code-hl');
+    $hl.removeClass().addClass('language-' + mobLang);
+    $hl.text(mobCode);
+    Prism.highlightElement($hl[0]);
+    $('.mob-view-btn').addClass('active');
+    $('.mob-edit-btn').removeClass('active');
+    $('#mob-code-view').show();
+    $('#mob-code-edit').hide();
+  });
+
+  $('#mob-code-toolbar').on('click', '.mob-edit-btn', function () {
+    if (mobMode === 'edit') return;
+    mobMode = 'edit';
+    $('.mob-edit-btn').addClass('active');
+    $('.mob-view-btn').removeClass('active');
+    $('#mob-code-edit').val(mobCode).show().trigger('focus');
+    $('#mob-code-view').hide();
+  });
+
+  // Tab key in mobile textarea
+  $('#mob-code-edit').on('keydown', function (e) {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      var s = this.selectionStart, en = this.selectionEnd;
+      this.value = this.value.substring(0, s) + '  ' + this.value.substring(en);
+      this.selectionStart = this.selectionEnd = s + 2;
+    }
+  });
+
+  // Run button
+  $('#mob-code-toolbar').on('click', '.mob-run-btn', function () {
+    var code = mobMode === 'edit' ? $('#mob-code-edit').val() : mobCode;
+    mobCode = code;
+    // Update desktop preview too
+    $('#preview-frame')[0].srcdoc = code;
+    mobSwitchTab('preview');
+    $('#mob-preview-empty').hide();
+    var $frame = $('#mob-preview-frame');
+    $frame.show().toggleClass('dark-mode', shouldInvert(mobFileId));
+    var _code = code;
+    setTimeout(function () { $frame[0].srcdoc = _code; }, 30);
+  });
+
+  // Copy button
+  $('#mob-code-toolbar').on('click', '.mob-copy-btn', function () {
+    var code = mobMode === 'edit' ? $('#mob-code-edit').val() : mobCode;
+    var $btn = $(this);
+    navigator.clipboard.writeText(code).then(function () {
+      $btn.addClass('copy-flash').text('✓ Copied!');
+      setTimeout(function () { $btn.removeClass('copy-flash').text('📋 Copy'); }, 1800);
+    });
+  });
+
+  // Dark / light preview toggle (mobile) — shares previewDark with desktop
+  $('#mob-dark-btn').on('click', function () {
+    previewDark = !previewDark;
+    applyDarkPref();
+  });
+
+  // Build mobile file tree (separate from desktop dock to avoid event conflicts)
+  function buildMobTree() {
+    var $tree = $('#mob-tree');
+    $tree.empty();
+    TUTORIALS.forEach(function (section) {
+      var $folder = $('<div class="folder-row open" data-id="m-' + section.id + '">');
+      $folder.html(
+        '<svg class="folder-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>' +
+        '<span class="folder-icon">' + section.icon + '</span>' +
+        '<span class="folder-label">' + section.label + '</span>' +
+        '<span class="folder-badge" style="' + section.badgeStyle + '">' + section.files.length + '</span>'
+      );
+      var $fileList = $('<div class="file-list" data-parent="m-' + section.id + '">');
+      section.files.forEach(function (file) {
+        var $row = $('<div class="mob-file-row" data-file-id="' + file.id + '" data-section-id="' + section.id + '">');
+        $row.html(
+          '<div class="file-dot" style="background:' + section.color + '"></div>' +
+          '<span class="file-name">' + file.name + '</span>'
+        );
+        $fileList.append($row);
+      });
+      $tree.append($folder);
+      $tree.append($fileList);
+    });
+  }
+
+  // Mobile file row click
+  $('#mob-tree').on('click', '.mob-file-row', function () {
+    var fileId    = $(this).data('file-id');
+    var sectionId = $(this).data('section-id');
+    var file = null, section = null;
+    TUTORIALS.forEach(function (s) {
+      if (s.id === sectionId) {
+        section = s;
+        s.files.forEach(function (f) { if (f.id === fileId) file = f; });
+      }
+    });
+    if (!file) return;
+    $('#mob-tree .mob-file-row').removeClass('active');
+    $(this).addClass('active');
+    mobOpenFile(fileId, file, section, getTutorialCode(fileId));
+  });
+
+  // ── Init ─────────────────────────────────────────────────────────
+  buildDock();
+  buildWelcomeCards();
+  buildMobTree();
+  applyDarkPref(); // restore saved light/dark preference
+});
+</script>
+</body>
+</html>
